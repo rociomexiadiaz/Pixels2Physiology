@@ -2,12 +2,9 @@
 
 A correctly oriented ECG strip has ink well above and/or below its busiest
 row. If any strip has nothing beyond +/-50 px of that row, the page may be
-upside down, so it is rotated 180 degrees and re-run.
-
-mode="notebook" keeps the rotated result whenever the rule fires (as in the
-paper). mode="compare" (default) keeps whichever orientation scores better,
-because a quiet lead such as aVR can look flat on an upright page and
-trigger the rule falsely (31% of validation pages under the notebook rule).
+upside down, so it is rotated 180 degrees, re-run, and whichever orientation
+holds more real traces is kept (a quiet lead such as aVR can look flat on an
+upright page).
 """
 import cv2
 import numpy as np
@@ -25,7 +22,7 @@ def strip_looks_upright(strip_mask, margin=ORIENTATION_MARGIN):
 
 
 def needs_flip(strip_masks):
-    """The notebook rule: any strip that looks flat means 'upside down'."""
+    """Any strip that looks flat means the page may be upside down."""
     return any(not strip_looks_upright(s) for s in strip_masks)
 
 

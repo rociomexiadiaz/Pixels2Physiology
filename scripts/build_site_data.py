@@ -21,24 +21,17 @@ samples = [json.loads((samples_dir / s["id"] / "result.json").read_text()) for s
 
 summary = json.loads((ROOT / "results/validation_scores.json").read_text())
 scores = pd.read_csv(ROOT / "results/validation_scores.csv")
-# headline: the shipped pipeline (compare orientation) scored with the corrected metric
-main = scores[(scores.orientation == "compare") & (scores.metric == "fixed")]
-per_lead = main.groupby("lead")[["rmse", "corr"]].mean()
+per_lead = scores.groupby("lead")[["rmse", "corr"]].mean()
 # per record: average its leads first, so every record counts once per damage type
-per_rec = main.groupby(["id", "degradation"]).rmse.mean().reset_index()
-variants = {k: {kk: v[kk] for kk in ("mean_rmse_mv", "mean_corr", "flipped_pages")}
-            for k, v in summary.items() if isinstance(v, dict)}
+per_rec = scores.groupby(["id", "degradation"]).rmse.mean().reset_index()
 metrics = {
-    "records": int(main.id.nunique()),
+    "records": int(scores.id.nunique()),
     "mean_rmse_mv": float(per_lead.rmse.mean()),
     "mean_corr": float(per_lead["corr"].mean()),
     "per_lead": {l: {"rmse": float(per_lead.loc[l, "rmse"]), "corr": float(per_lead.loc[l, "corr"])}
                  for l in LEADS if l in per_lead.index},
     "by_degradation": per_rec.groupby("degradation").rmse.mean().round(4).to_dict(),
-    "n_by_degradation": per_rec.groupby("degradation").id.nunique().to_dict(),
-    "variants": variants,
-    "paper_reported_rmse": 0.233,
-    "seconds_per_page": summary["median_seconds_per_page_incl_second_pass"],
+    "seconds_per_page": summary["median_seconds_per_page"],
 }
 out = ROOT / "docs/assets/data.js"
 out.write_text("window.P2P = " + json.dumps({"metrics": metrics, "samples": samples}, separators=(",", ":")) + ";\n")

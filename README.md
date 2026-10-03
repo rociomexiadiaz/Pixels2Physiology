@@ -67,22 +67,6 @@ By damage type (mean RMSE, mV):
 
 RMSE is computed after aligning each lead by up to ±0.2 s and one constant vertical offset (`p2p/metrics.py`).
 
-### Two bugs found while packaging the notebook
-
-Rebuilding the notebook as a tested package turned up two problems. Both are fixed, and the original behaviour is kept behind a flag (`Pipeline(orientation="notebook")`, `aligned_scores(paper=True)`) so the paper's setup can still be reproduced. One run of `scripts/evaluate.py` scores all four combinations on the same model outputs:
-
-| Setup | RMSE (mV) | Correlation | Pages flipped |
-|---|---|---|---|
-| Paper setup: original rotation rule, original scoring | 0.264 | 0.309 | 55 |
-| Original rule, corrected scoring | 0.219 | 0.550 | 55 |
-| Fixed rule, original scoring | 0.250 | 0.448 | 4 |
-| **Fixed rule, corrected scoring (this repo)** | 0.199 | 0.703 | 4 |
-
-1. **The evaluation shifted traces the wrong way.** It found the right time lag, then applied it in the opposite direction, doubling the misalignment. This only made scores worse, and it explains the paper's low correlation.
-2. **The upside-down check fired on 55 of 176 pages.** Only one validation page is actually upside down. A quiet lead (e.g. aVR) can look flat on an upright page and trigger a 180° flip. When the check fires, the pipeline now compares both orientations and keeps the better one; 3 upright pages are still flipped, down from 54.
-
-The paper reported 0.233 mV; re-running its exact setup from the released weights gives 0.264 mV. The weights match the notebook's Kaggle copies byte for byte, so the remaining gap comes from the original run's environment.
-
 **Known limits:** very tall peaks that run past their strip get clipped; the strip layout is fixed to the standard 4-row format; not clinically validated.
 
 ## Use it
@@ -117,14 +101,15 @@ p2p/                   the library, one file per stage
   orb.py, render.py, data.py   training-data automation and datasets
 scripts/
   digitise.py          CLI: image(s) -> CSV (+ check sheet)
-  evaluate.py          reproduce the validation numbers
+  evaluate.py          score the pipeline on the held-out validation set
   make_masks.py        auto-label paper masks with ORB
   train_unet1.py       train the paper finder
   train_unet2.py       train the ink finder
   make_demo_assets.py  run real records and export every step for docs/
   make_diagram_assets.py  real outputs for the 'under the hood' diagram
   build_site_data.py   bundle samples + metrics for the web page
-docs/                  the interactive walkthrough (GitHub Pages)
+docs/                  the interactive demo (GitHub Pages)
+tests/                 quick checks on the rule-based steps (pytest)
 pixels2physiology.ipynb  the original Kaggle notebook
 ```
 

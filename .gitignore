@@ -3,6 +3,5 @@ __pycache__/
 *.pyc
 weights/*.pth
 out/
-results/eval.log
-results/page_corners.csv
 .DS_Store
+results/

@@ -78,20 +78,19 @@ class PipelineResult:
 
 
 class Pipeline:
-    def __init__(self, unet1, unet2, device, orientation="compare"):
+    def __init__(self, unet1, unet2, device):
         self.unet1 = unet1.to(device).eval()
         self.unet2 = unet2.to(device).eval()
         self.device = device
-        self.orientation = orientation   # "compare" (default) or "notebook" (paper)
 
     @classmethod
-    def from_pretrained(cls, weights_dir=None, device=None, orientation="compare"):
+    def from_pretrained(cls, weights_dir=None, device=None):
         device = pick_device(device)
         kw = {"weights_dir": weights_dir} if weights_dir else {}
         u1, u2 = UNet(), UNet_Res_CBAM()
         u1.load_state_dict(torch.load(weight_path("unet1", **kw), map_location="cpu"))
         u2.load_state_dict(torch.load(weight_path("unet2", **kw), map_location="cpu"))
-        return cls(u1, u2, device, orientation)
+        return cls(u1, u2, device)
 
     def _once(self, page):
         document, mask, corners = crop.crop_document(page, self.unet1, self.device)
@@ -117,7 +116,7 @@ class Pipeline:
                           "strip_images": s_imgs, "strip_masks": s_masks}
             rot = orient.rotate_180(page)
             second = self._once(rot)
-            if self.orientation == "notebook" or orient.orientation_score(second[4]) > orient.orientation_score(s_masks):
+            if orient.orientation_score(second[4]) > orient.orientation_score(s_masks):
                 page = rot
                 document, mask, corners, s_imgs, s_masks = second
             else:
