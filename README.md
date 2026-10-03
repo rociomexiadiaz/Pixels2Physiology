@@ -73,8 +73,8 @@ RMSE is computed after aligning each lead by up to ±0.2 s and one constant vert
 
 ```bash
 pip install -r requirements.txt
-python scripts/download_weights.py                 # 2 models, ~250 MB, from the GitHub release
 python scripts/digitise.py scan.png --fs 500 --figure          # -> out/scan.csv + out/scan.png
+                                                               #    (first run downloads the 2 models, ~250 MB)
 python scripts/digitise.py folder_of_scans/ --fs 500 --out out/  # batch; pages missing a lead print CHECK
 ```
 

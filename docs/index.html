@@ -301,9 +301,9 @@ body.static .hero-ecg path{stroke-dashoffset:0}
 git clone https://github.com/rociomexiadiaz/Pixels2Physiology
 cd Pixels2Physiology
 pip install -r requirements.txt
-python scripts/download_weights.py
 
-<span class="c"># one scan, or a whole folder → one CSV per record</span>
+<span class="c"># one scan, or a whole folder → one CSV per record
+# (the first run downloads the two models)</span>
 python scripts/digitise.py scan.png --fs 500 --figure
 python scripts/digitise.py scans/ --fs 500 --out out/</pre>
     </div>
