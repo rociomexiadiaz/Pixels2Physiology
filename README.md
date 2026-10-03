@@ -1,28 +1,23 @@
 # Pixels2Physiology
 
-**Turn a photo or scan of a paper ECG back into the digital heart signal, automatically.**
+**Automatic paper ECG digitisation, Image to CSV Pipeline.**
 
-### ▶ [Open the interactive demo: Automatic ECG Digitalisation](https://rociomexiadiaz.github.io/Pixels2Physiology/)
-Pick a damaged ECG and step through every stage, from photo to 12-lead signal.
+### ▶ [Interactive demo: Automatic ECG Digitalisation](https://rociomexiadiaz.github.io/Pixels2Physiology/)
 
-![The pipeline, step by step](docs/assets/pipeline.gif)
+![](docs/assets/pipeline.gif)
 
 Decades of ECGs exist only on paper, as scans and photos. A computer can't analyse a picture of a heartbeat. This pipeline takes the picture, however damaged (phone photos, stains, mould, upside down), and returns 12 leads in millivolts as a CSV. It runs on an ordinary laptop in about 4 seconds a page.
 
-## How it works: six steps, AI only where rules can't cope
+## How it works
 
 | # | Step | How | File |
 |---|---|---|---|
-| 1 | Photo in | rule: pad and resize to a standard canvas | `p2p/preprocess.py` |
-| 2 | Find the paper | **AI model #1** (U-Net) marks the sheet's pixels | `p2p/crop.py` |
-| 3 | Flatten & rotate | rule: fit corners, perspective warp, 180° check | `p2p/crop.py`, `p2p/orient.py` |
-| 4 | Cut the strips | rule: the standard 12-lead layout has 4 rows | `p2p/strips.py` |
-| 5 | Lift the ink | **AI model #2** (residual U-Net + CBAM, grayscale + FFT input) | `p2p/strips.py` |
-| 6 | Measure | rule: column-wise height → mV, cubic resample | `p2p/digitise.py` |
-
-Two small networks do the two genuinely hard visual jobs. Everything else is deterministic, explainable image and signal processing, which keeps it cheap to run, easy to test and simple to change.
-
-The paper-finding model needed **no hand-drawn labels**. Its training masks were generated automatically by matching each damaged image to its clean original (ORB keypoints + RANSAC homography, `p2p/orb.py`).
+| 1 | Photo in | pad and resize to a standard canvas | `p2p/preprocess.py` |
+| 2 | Find the paper | U-Net | `p2p/crop.py` |
+| 3 | Flatten & rotate | fit corners, perspective warp, 180° check | `p2p/crop.py`, `p2p/orient.py` |
+| 4 | Cut the strips | standard 12-lead layout has fixed 4 rows | `p2p/strips.py` |
+| 5 | Lift the ink | U-Net | `p2p/strips.py` |
+| 6 | Measure | pixels dimension → mV | `p2p/digitise.py` |
 
 ## Results (held-out validation set)
 
@@ -113,7 +108,7 @@ tests/                 quick checks on the rule-based steps (pytest)
 pixels2physiology.ipynb  the original Kaggle notebook
 ```
 
-The training scripts are a faithful port of the notebook (`pixels2physiology.ipynb`, also on [Kaggle](https://www.kaggle.com/code/rociomexia/ecg-physionetchallenge-6)). The released weights are the notebook's. Inference and evaluation were re-run from this package to produce the numbers above.
+The scripts are a modular version of the notebook (`pixels2physiology.ipynb`, also on [Kaggle](https://www.kaggle.com/code/rociomexia/ecg-physionetchallenge-6)). The released weights are the notebook's. 
 
 ## Data
 
