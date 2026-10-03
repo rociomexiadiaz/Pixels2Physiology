@@ -1,125 +1,127 @@
 # Pixels2Physiology
 
-A cascaded deep learning pipeline for automated digitisation of degraded ECG images into 12-lead time-series signals. Developed as an entry for the **[PhysioNet 2025 ECG Image Digitisation Challenge](https://physionet.org/content/ecg-image-kit/1.0.1/)**.
+**Turn a photo or scan of a paper ECG back into the digital heart signal, automatically.**
 
-> **"From Pixels to Physiology: A Two-Stage U-Net Approach for ECG Signal Recovery"**  
-> *Rocio Mexia Diaz — r.mexiadiaz@hotmail.com*
+### ▶ [Open the interactive demo: Automatic ECG Digitalisation](https://rociomexiadiaz.github.io/Pixels2Physiology/)
+Pick a damaged ECG and step through every stage, from photo to 12-lead signal.
 
----
+![The pipeline, step by step](docs/assets/pipeline.gif)
 
-## Overview
+Decades of ECGs exist only on paper, as scans and photos. A computer can't analyse a picture of a heartbeat. This pipeline takes the picture, however damaged (phone photos, stains, mould, upside down), and returns 12 leads in millivolts as a CSV. It runs on an ordinary laptop in about 4 seconds a page.
 
-Billions of ECG records exist only as scanned images or physical printouts, making them incompatible with modern machine learning systems that require time-series data. This project addresses that gap with a two-stage deep learning pipeline that can handle severely degraded ECG images — including mould, water damage, rotation, and mobile photography distortions — and recover the underlying 12-lead waveform signal.
+## How it works: six steps, AI only where rules can't cope
 
-### Pipeline
+| # | Step | How | File |
+|---|---|---|---|
+| 1 | Photo in | rule: pad and resize to a standard canvas | `p2p/preprocess.py` |
+| 2 | Find the paper | **AI model #1** (U-Net) marks the sheet's pixels | `p2p/crop.py` |
+| 3 | Flatten & rotate | rule: fit corners, perspective warp, 180° check | `p2p/crop.py`, `p2p/orient.py` |
+| 4 | Cut the strips | rule: the standard 12-lead layout has 4 rows | `p2p/strips.py` |
+| 5 | Lift the ink | **AI model #2** (residual U-Net + CBAM, grayscale + FFT input) | `p2p/strips.py` |
+| 6 | Measure | rule: column-wise height → mV, cubic resample | `p2p/digitise.py` |
 
-```
-Input Image → Preprocessing → UNet-1 (Document Segmentation) → UNet-2 (Trace Extraction) → Time-Series Output
-```
+Two small networks do the two genuinely hard visual jobs. Everything else is deterministic, explainable image and signal processing, which keeps it cheap to run, easy to test and simple to change.
 
-1. **Preprocessing** — Pads and resizes all images to 1700×2200 pixels, preserving aspect ratio, then converts to grayscale.
-2. **UNet-1: Document Segmentation** — A standard 5-level U-Net detects and crops the ECG document from its background, correcting for rotation and perspective distortion using ORB feature matching for ground-truth mask generation.
-3. **UNet-2: ECG Trace Extraction** — A Residual Attention U-Net (ResAttentionUNet) with CBAM modules removes the background grid and isolates the ECG trace as a binary mask. Takes dual-channel input: grayscale + FFT magnitude.
-4. **Post-processing & Digitisation** — Morphological operations clean the mask, a column-wise peak-detection algorithm extracts voltage values, and cubic spline interpolation resamples the signal to the target length.
+The paper-finding model needed **no hand-drawn labels**. Its training masks were generated automatically by matching each damaged image to its clean original (ORB keypoints + RANSAC homography, `p2p/orb.py`).
 
----
+## Results (held-out validation set)
 
-## Results
+Scored on **176 records the models never saw**, each at one of 8 damage types, with the seeded split from the paper (`scripts/evaluate.py`).
 
-Evaluated across all 12 standard ECG leads on the PhysioNet 2025 challenge dataset:
-
-| Metric | Score |
+| | |
 |---|---|
-| Mean RMSE | **0.233 mV** |
-| Mean Cross-Correlation | **0.328** |
+| Mean RMSE per lead | **0.199 mV**, about 2 small squares on standard ECG paper |
+| Mean correlation | 0.70 |
+| Time per page | ~4 s on a laptop (Apple-silicon GPU), no cloud |
 
-Performance per lead:
+By damage type (mean RMSE, mV):
 
-| Lead | RMSE (mV) | Cross-Correlation |
-|------|-----------|-------------------|
-| I    | 0.210     | 0.361             |
-| II   | 0.206     | 0.330             |
-| III  | 0.154     | 0.332             |
-| aVR  | 0.230     | 0.300             |
-| aVL  | 0.160     | 0.360             |
-| aVF  | 0.146     | 0.302             |
-| V1   | 0.225     | 0.359             |
-| V2   | 0.319     | 0.356             |
-| V3   | 0.302     | 0.347             |
-| V4   | 0.326     | 0.291             |
-| V5   | 0.292     | 0.299             |
-| V6   | 0.226     | 0.301             |
+| Damage type | RMSE (mV) |
+|---|---|
+| Colour scan | 0.181 |
+| Black & white scan | 0.181 |
+| Stained photo, sideways | 0.182 |
+| Mould, colour scan | 0.183 |
+| Mould, black & white scan | 0.191 |
+| Phone photo of a printout | 0.213 |
+| Phone photo of a screen | 0.218 |
+| Damaged printout | 0.219 |
 
-### Ablation Study — Effect of FFT Input Channel
+<details><summary>Per lead</summary>
 
-Removing the FFT magnitude channel from ResAttentionUNet inputs revealed its critical role in temporal alignment:
-
-| Configuration | Mean RMSE | Mean Cross-Correlation |
+| Lead | RMSE (mV) | Correlation |
 |---|---|---|
-| Grayscale + FFT (full model) | 0.233 mV | 0.328 |
-| Grayscale only (ablation) | **0.177 mV** | **−0.0008** |
+| I | 0.161 | 0.681 |
+| aVR | 0.155 | 0.696 |
+| V1 | 0.172 | 0.762 |
+| V4 | 0.296 | 0.638 |
+| II | 0.173 | 0.680 |
+| aVL | 0.124 | 0.720 |
+| V2 | 0.271 | 0.758 |
+| V5 | 0.265 | 0.653 |
+| III | 0.146 | 0.712 |
+| aVF | 0.135 | 0.719 |
+| V3 | 0.274 | 0.738 |
+| V6 | 0.216 | 0.675 |
+</details>
 
-The FFT channel is essential for temporal coherence; without it, amplitude accuracy improves but phase alignment collapses entirely.
+RMSE is computed after aligning each lead by up to ±0.2 s and one constant vertical offset (`p2p/metrics.py`).
 
----
+**Known limits:** very tall peaks that run past their strip get clipped; the strip layout is fixed to the standard 4-row format; not clinically validated.
 
-## Architecture Details
+## Use it
 
-### UNet-1 — Document Segmentation
+```bash
+pip install -r requirements.txt
+python scripts/download_weights.py                 # 2 models, ~250 MB, from the GitHub release
+python scripts/digitise.py scan.png --fs 500 --figure          # -> out/scan.csv + out/scan.png
+python scripts/digitise.py folder_of_scans/ --fs 500 --out out/  # batch; pages missing a lead print CHECK
+```
 
-- Standard U-Net with 5 encoder-decoder levels
-- Input: 512×656 downsampled grayscale images
-- Encoder: double 3×3 convolutions + ReLU, max-pooling with stride 2
-- Decoder: transposed convolutions + skip connections
-- Loss: Binary Cross-Entropy + Dice (0.5/0.5 weighting)
-- Optimiser: AdamW, lr=0.001, 10 epochs, batch size 8
-- Ground truth generated via **ORB keypoint matching + RANSAC homography** between high-quality and degraded image pairs
+```python
+from p2p import Pipeline
+result = Pipeline.from_pretrained().run("scan.png", n_samples=5000)
+result.signals_dataframe(fs=500, n_samples=5000).to_csv("ecg.csv")
+result.document, result.strip_masks, result.flipped   # every intermediate is kept
+```
 
-### UNet-2 — ResAttentionUNet (Trace Extraction)
+## Repo layout
 
-- Residual blocks with identity skip connections
-- **CBAM (Convolutional Block Attention Module)** at each decoder skip connection — channel attention + spatial attention
-- Input: 2-channel (grayscale + FFT magnitude spectrogram), patches of 384×2192
-- Loss: DiceFocalLoss (Dice + Focal, 0.5/0.5 weighting)
-- Optimiser: Adam, lr=0.0001, 40 epochs, batch size 2
+```
+p2p/                   the library, one file per stage
+  config.py            every fixed number (canvas, strip rows, paper scale, norms)
+  preprocess.py        step 1
+  crop.py              steps 2-3 (UNet-1 + geometry)
+  orient.py            upside-down check
+  strips.py            steps 4-5 (cut + UNet-2)
+  digitise.py          step 6
+  models.py            the two networks and their losses
+  metrics.py           aligned RMSE / correlation
+  pipeline.py          Pipeline: runs it all, keeps every intermediate
+  orb.py, render.py, data.py   training-data automation and datasets
+scripts/
+  digitise.py          CLI: image(s) -> CSV (+ check sheet)
+  evaluate.py          score the pipeline on the held-out validation set
+  make_masks.py        auto-label paper masks with ORB
+  train_unet1.py       train the paper finder
+  train_unet2.py       train the ink finder
+  make_demo_assets.py  run real records and export every step for docs/
+  make_diagram_assets.py  real outputs for the 'under the hood' diagram
+  build_site_data.py   bundle samples + metrics for the web page
+docs/                  the interactive demo (GitHub Pages)
+tests/                 quick checks on the rule-based steps (pytest)
+pixels2physiology.ipynb  the original Kaggle notebook
+```
+
+The training scripts are a faithful port of the notebook (`pixels2physiology.ipynb`, also on [Kaggle](https://www.kaggle.com/code/rociomexia/ecg-physionetchallenge-6)). The released weights are the notebook's. Inference and evaluation were re-run from this package to produce the numbers above.
 
 ## Data
 
-This project uses the **PhysioNet 2025 ECG Image Digitisation Challenge** dataset, available on Kaggle:
-
-- [physionet-ecg-image-digitization](https://www.kaggle.com/competitions/physionet-ecg-image-digitization)
-
-The dataset contains ECG images paired with ground-truth 12-lead time-series across eight degradation categories.
-
-
-## Limitations
-
-- Signals with very high amplitude deflections that exceed strip height boundaries are clipped, causing peak detection errors.
-- The fixed 4-strip layout assumes standard 12-lead ECG formatting; alternative vendor templates would require adaptation.
-
----
-
-## Future Work
-
-- Adaptive strip cropping based on detected trace positions
-- Multi-task learning combining amplitude and phase objectives
-- Extension to variable-duration recordings beyond the 10-second standard
-- Clinical validation studies assessing diagnostic equivalence
-
----
+[PhysioNet 2025 ECG Image Digitisation Challenge](https://www.kaggle.com/competitions/physionet-ecg-image-digitization): images generated with ECG-Image-Kit from [PTB-XL](https://physionet.org/content/ptb-xl/) records (CC BY 4.0). The six images on the demo page are validation records from that dataset, shown for illustration.
 
 ## Citation
-
-If you use this work, please cite:
 
 ```
 Mexia Diaz, R. (2025). From Pixels to Physiology: A Two-Stage U-Net Approach for ECG Signal Recovery.
 PhysioNet 2025 ECG Image Digitisation Challenge.
-Contact: r.mexiadiaz@hotmail.com
 ```
-
----
-
-## License
-
-This project was developed for the PhysioNet 2025 Challenge. Please refer to the [PhysioNet data use agreement](https://physionet.org/about/data-use/) for data licensing terms.

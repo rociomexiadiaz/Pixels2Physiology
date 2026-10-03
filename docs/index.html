@@ -1,0 +1,800 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Automatic ECG Digitalisation</title>
+<meta name="description" content="Turning photos and scans of paper ECGs back into digital heart signals, automatically.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light;
+  --paper:#fbf8f3; --paper-2:#f3eee5; --card:#ffffff;
+  --ink:#1d2330; --ink-2:#4a5263; --ink-3:#7b8293;
+  --line:#e6dfd3; --grid:#f0d9d6; --grid-2:#e7bcb7;
+  --red:#e0314b; --red-soft:#fde8eb;
+  --blue:#2e6fb5; --blue-soft:#e6eff9;
+  --ai:#6a4bd6; --ai-soft:#efeafd;
+  --green:#3a9a3a;
+  --r:14px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+img{display:block;max-width:100%}
+a{color:var(--blue)}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+h1,h2,h3{font-family:Fraunces,Georgia,serif;font-weight:650;letter-spacing:-.01em;line-height:1.15;margin:0}
+h3{font-size:20px}
+.kicker{font:600 13px/1 Inter;letter-spacing:.14em;text-transform:uppercase;color:var(--red);margin-bottom:22px}
+section{padding:72px 0;border-top:1px solid var(--line)}
+.muted{color:var(--ink-3)}
+.tag{display:inline-flex;align-items:center;gap:6px;font:600 11px/1 Inter;letter-spacing:.06em;text-transform:uppercase;padding:5px 8px;border-radius:999px;white-space:nowrap}
+.tag.ai{background:var(--ai-soft);color:var(--ai)}
+.tag::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.tag.train{background:#e9f4e9;color:#2f7d2f}
+
+/* ---------- hero ---------- */
+.hero{padding:96px 0 0;position:relative;overflow:hidden}
+.hero h1{font-size:clamp(44px,8vw,92px);max-width:900px}
+.hero-ecg{display:block;width:100%;height:130px;margin-top:48px}
+.hero-ecg path{fill:none;stroke:var(--red);stroke-width:2;stroke-linejoin:round;stroke-dasharray:3000;stroke-dashoffset:3000;animation:draw 4s ease-out .3s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+
+/* ---------- problem ---------- */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+.bullets{list-style:none;margin:0;padding:0;display:grid;gap:18px}
+.bullets li{font:500 clamp(20px,2.4vw,26px)/1.35 Fraunces,Georgia,serif;padding-left:34px;position:relative}
+.bullets li::before{content:"";position:absolute;left:0;top:.5em;width:14px;height:14px;border-radius:50%;background:var(--red)}
+.bullets li:first-child::before{background:var(--blue)}
+.bullets li small{display:block;font:400 15px/1.5 Inter;color:var(--ink-2);margin-top:4px}
+.paper-stack{position:relative;aspect-ratio:4/3}
+.paper-stack img{position:absolute;width:78%;border-radius:6px;box-shadow:0 10px 30px rgba(40,30,20,.18)}
+.paper-stack img:nth-child(1){left:0;top:6%;transform:rotate(-6deg)}
+.paper-stack img:nth-child(2){left:12%;top:0;transform:rotate(3deg)}
+.paper-stack img:nth-child(3){left:22%;top:16%;transform:rotate(-1deg)}
+
+/* ---------- pipeline overview ---------- */
+.flow{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+.flow-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 14px 18px;position:relative;min-height:128px;display:flex;flex-direction:column}
+.flow-card .n{font:650 30px Fraunces;color:var(--ink-3)}
+.flow-card h3{font-size:18px;margin-top:auto}
+.flow-card .tag{position:absolute;top:16px;right:12px}
+.flow-card.ai{border-color:#d8cdfa}
+.flow-card:not(:last-child)::after{content:"";position:absolute;right:-10px;top:30px;width:8px;height:8px;border-top:2px solid var(--ink-3);border-right:2px solid var(--ink-3);transform:rotate(45deg)}
+
+/* ---------- demo ---------- */
+#demo{background:var(--paper-2)}
+.app-bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+.app-bar label{font-weight:600;font-size:14px}
+.select{appearance:none;font:500 16px Inter;color:var(--ink);background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%231d2330' stroke-width='2' fill='none'/%3E%3C/svg%3E") no-repeat right 14px center;border:1px solid var(--line);border-radius:12px;padding:12px 40px 12px 14px;min-width:280px;max-width:100%;cursor:pointer}
+.btn{appearance:none;border:1px solid var(--ink);background:var(--ink);color:#fff;font:600 15px Inter;padding:12px 18px;border-radius:999px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.next-btn{margin-left:auto;font-size:16px;padding:12px 22px;background:var(--red);border-color:var(--red)}
+.next-btn:disabled{opacity:.35;cursor:default}
+.next-btn svg{width:18px;height:18px}
+.select:focus-visible,.btn:focus-visible,.step:focus-visible,.icon-btn:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.player{background:var(--card);border-radius:18px;border:1px solid var(--line);padding:16px;min-width:0}
+.steps{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:14px}
+.step{appearance:none;border:0;background:var(--paper);border-radius:10px;padding:8px 8px 10px;cursor:pointer;text-align:left;font:inherit;color:var(--ink-3);position:relative;overflow:hidden;min-width:0}
+.step small{display:block;font:600 11px Inter;letter-spacing:.06em;text-transform:uppercase}
+.step strong{display:block;font-size:13px;line-height:1.25;color:inherit;font-weight:600;margin-top:2px}
+.step .bar{position:absolute;left:0;bottom:0;height:3px;width:0;background:var(--red)}
+.step.done{color:var(--ink-2)} .step.done .bar{width:100%}
+.step.active{color:var(--ink);background:var(--red-soft)}
+.step.active .bar{animation:fill var(--dur,2.2s) linear forwards}
+@keyframes fill{from{width:0}to{width:100%}}
+.step .kind{position:absolute;top:8px;right:8px;width:7px;height:7px;border-radius:50%}
+.step .kind.ai{background:var(--ai)}
+.stage{position:relative;aspect-ratio:22/17;background:#ece7de;border-radius:12px;overflow:hidden}
+.layer{position:absolute;inset:0;transition:opacity .7s ease}
+.hidden{opacity:0;pointer-events:none}
+#photoBox{position:absolute;transition:transform 1.1s cubic-bezier(.6,0,.2,1),opacity .7s}
+#photoBox img{position:absolute;inset:0;width:100%;height:100%}
+#maskImg{opacity:0;transition:opacity .6s;clip-path:inset(0 100% 0 0)}
+#maskImg.on{opacity:1;clip-path:inset(0 0 0 0);transition:clip-path 1.1s ease,opacity .3s}
+#overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;transition:opacity .4s}
+#overlay polygon{fill:none;stroke:var(--red);stroke-width:7;stroke-linejoin:round}
+#overlay circle{fill:var(--red);stroke:#fff;stroke-width:4}
+#pageLayer img{width:100%;height:100%}
+.strip-box{position:absolute;left:.4%;right:.4%;border:3px solid var(--red);border-radius:6px;background:rgba(224,49,75,.06);opacity:0;transform:translateX(-12px);transition:opacity .45s,transform .45s}
+.strip-box.on{opacity:1;transform:none}
+.strip-box i{position:absolute;left:8px;top:-1px;transform:translateY(-100%);background:var(--red);color:#fff;font:600 11px Inter;padding:2px 7px;border-radius:5px 5px 0 0;font-style:normal}
+#stripsLayer{display:flex;flex-direction:column;justify-content:center;gap:2.5%;padding:3%;background:#fff}
+.strip-row{position:relative;aspect-ratio:2192/384;width:100%}
+.strip-row img{position:absolute;inset:0;width:100%;height:100%}
+.strip-row .grid-img{transition:opacity 1s ease}
+.strip-row .ink-img{clip-path:inset(0 100% 0 0);transition:clip-path 1.2s ease}
+.strip-row.on .grid-img{opacity:.13}
+.strip-row.on .ink-img{clip-path:inset(0 0 0 0)}
+#signalLayer{background:#fff;padding:10px 12px 8px;display:flex;flex-direction:column}
+.sig-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:0 4px}
+.sig-head h3{font-size:16px}
+.key{display:flex;gap:14px;font-size:13px;color:var(--ink-2);flex-wrap:wrap;align-items:center}
+.key span,.key label{display:inline-flex;align-items:center;gap:6px}
+.key label{cursor:pointer}
+.key i{width:16px;height:2px;border-radius:2px;display:inline-block}
+#ecg12{flex:1;min-height:0;width:100%;margin-top:4px}
+#ecg12 .g-min{stroke:#f6e3e0;stroke-width:.6}
+#ecg12 .g-maj{stroke:#ecc4bf;stroke-width:.9}
+#ecg12 text{font:11px Inter;fill:var(--ink-2)}
+#ecg12 .lead-lab{font:600 12px Inter;fill:var(--ink)}
+#ecg12 .rm{font:10px Inter;fill:var(--ink-3)}
+#ecg12 path.series{fill:none;stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round}
+#ecg12 .hover-line{stroke:var(--ink-3);stroke-width:1}
+.controls{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+.icon-btn{appearance:none;border:1px solid var(--line);background:var(--paper);width:40px;height:40px;border-radius:50%;cursor:pointer;display:grid;place-items:center;color:var(--ink)}
+.icon-btn svg{width:16px;height:16px}
+.flip-note{position:absolute;left:12px;top:12px;background:var(--ink);color:#fff;font:600 12px Inter;padding:6px 10px;border-radius:8px;opacity:0;transition:.3s;z-index:5}
+.flip-note.on{opacity:1}
+.tooltip{position:absolute;pointer-events:none;background:var(--ink);color:#fff;font-size:12px;padding:6px 9px;border-radius:8px;white-space:nowrap;opacity:0;transition:opacity .1s;z-index:6}
+.tooltip i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+
+/* ---------- results ---------- */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px}
+.stat b{display:block;font:650 clamp(40px,5vw,60px)/1 Fraunces;letter-spacing:-.02em}
+.stat b small{font-size:.42em;font-weight:500;margin-left:4px;color:var(--ink-2)}
+.stat span{display:block;margin-top:10px;font-size:14px;color:var(--ink-2)}
+.res-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px}
+.panel h3{margin-bottom:14px;font-size:18px}
+#scaleSvg{width:100%;height:auto}
+.bars{display:grid;gap:7px}
+.bar-row{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:10px;font-size:13px}
+.bar-row b{font-weight:600}
+.bar-row .track{height:14px;position:relative}
+.bar-row .fill{position:absolute;left:0;top:0;bottom:0;background:var(--red);border-radius:0 4px 4px 0;transform-origin:left;transform:scaleX(0);transition:transform .9s cubic-bezier(.2,.7,.2,1)}
+.in-view .bar-row .fill{transform:scaleX(1)}
+.bar-row .v{font-variant-numeric:tabular-nums;color:var(--ink-2);text-align:right}
+.ref-line{position:absolute;top:-4px;bottom:-4px;width:0;border-left:1px solid var(--ink-3)}
+.ref-lab{font-size:12px;color:var(--ink-3);margin-top:8px}
+
+/* ---------- automation ---------- */
+.auto{display:grid;grid-template-columns:.8fr 1.2fr;gap:28px;align-items:center}
+.auto h3{font-size:30px}
+.auto p{color:var(--ink-2);margin:10px 0 0}
+pre{background:#1d2330;color:#e9ecf2;padding:18px 20px;border-radius:12px;overflow-x:auto;font:14px/1.7 ui-monospace,Menlo,monospace;margin:0}
+pre .c{color:#8b93a7}
+
+/* ---------- under the hood ---------- */
+.hood{display:grid;gap:18px}
+.stage-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;display:grid;grid-template-columns:1.45fr 1fr;gap:26px;align-items:center}
+.stage-card.wide{grid-template-columns:1fr}
+.stage-card.wide .spec{grid-template-columns:1fr 1fr}
+.stage-card.wide .info{display:grid;grid-template-columns:260px 1fr;gap:20px;align-items:start}
+.stage-card .head{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.stage-card .num{width:34px;height:34px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font:650 16px Fraunces;flex:none}
+.stage-card h3{font-size:22px}
+.spec{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:14px;color:var(--ink-2)}
+.spec li{padding:8px 12px;background:var(--paper);border-radius:9px;border-left:3px solid var(--line)}
+.spec li b{color:var(--ink);font-weight:600}
+.spec code{font:12.5px ui-monospace,Menlo,monospace;color:var(--ink)}
+.visual{min-width:0}
+.vrow{display:flex;align-items:center;gap:10px}
+.vrow > *{min-width:0}
+.arrow{flex:none;width:26px;height:16px;color:var(--ink-3)}
+.thumb-box{border-radius:8px;overflow:hidden;border:1px solid var(--line);background:#fff;position:relative}
+.thumb-box .lab{position:absolute;left:6px;top:6px;background:rgba(29,35,48,.85);color:#fff;font:600 10px Inter;padding:2px 6px;border-radius:5px;letter-spacing:.03em}
+.unet-svg{width:100%;height:auto;display:block}
+.unet-svg text{font:11px Inter;fill:var(--ink-2)}
+.unet-svg .big{font:600 11px Inter;fill:var(--ink)}
+.chan-stack{display:grid;gap:4px}
+.hist-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin-top:12px}
+.hist-grid h4{margin:0 0 4px;font:600 12px Inter;color:var(--ink-2)}
+.hist-svg{width:100%;height:auto;display:block}
+.hist-svg text{font:9.5px Inter;fill:var(--ink-2)}
+#digSvg{width:100%;height:auto;display:block}
+#digSvg text{font:10.5px Inter;fill:var(--ink-2)}
+
+footer{padding:40px 0 60px;color:var(--ink-3);font-size:14px;border-top:1px solid var(--line)}
+
+@media (max-width:900px){
+  .stage-card.wide .info,.stage-card.wide .spec{grid-template-columns:1fr}
+  .two,.res-grid,.auto,.stage-card{grid-template-columns:1fr}
+  .flow{grid-template-columns:repeat(3,1fr)} .flow-card::after{display:none}
+}
+@media (max-width:600px){
+  .flow{grid-template-columns:repeat(2,1fr)}
+  .steps{grid-template-columns:repeat(3,1fr)}
+  .next-btn{margin-left:0;width:100%;justify-content:center}.select{min-width:0;width:100%}
+  section{padding:52px 0}
+  .stats{grid-template-columns:1fr}
+}
+body.static *{transition:none!important;animation:none!important}
+body.static .hero-ecg path{stroke-dashoffset:0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}.hero-ecg path{stroke-dashoffset:0}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap"><h1>Automatic ECG Digitalisation</h1></div>
+  <svg class="hero-ecg" viewBox="0 0 1200 120" preserveAspectRatio="none" aria-hidden="true"><path id="heroPath" d=""/></svg>
+</header>
+
+<section id="problem">
+  <div class="wrap two">
+    <div>
+      <div class="kicker">The problem</div>
+      <ul class="bullets">
+        <li>Paper ECGs are readable by a doctor</li>
+        <li>Not readable by AI<small>Models need the electrical signal, not a picture of it</small></li>
+        <li>Or expensive for AI to read accurately<small>Printouts, scans and photos, often stained, creased or upside down</small></li>
+      </ul>
+    </div>
+    <div class="paper-stack" id="paperStack" aria-hidden="true"></div>
+  </div>
+</section>
+
+<section id="pipeline">
+  <div class="wrap">
+    <div class="kicker">The pipeline</div>
+    <div class="flow" id="flow"></div>
+  </div>
+</section>
+
+<section id="demo">
+  <div class="wrap">
+    <div class="kicker">Demo</div>
+    <div class="app-bar">
+      <label for="pick">ECG image</label>
+      <select class="select" id="pick"></select>
+      <button class="btn next-btn" id="nextBig">Next step <svg viewBox="0 0 16 16"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+    </div>
+    <div class="player">
+      <div class="steps" id="steps"></div>
+      <div class="stage" id="stage">
+        <div class="flip-note" id="flipNote">Upside down detected → rotating 180°</div>
+        <div class="layer" id="photoLayer">
+          <div id="photoBox">
+            <img id="photoImg" alt="Input ECG image">
+            <img id="maskImg" alt="">
+          </div>
+        </div>
+        <div class="layer hidden" id="pageLayer"><img id="pageImg" alt="Flattened ECG page"><div id="boxes"></div></div>
+        <svg id="overlay" viewBox="0 0 2200 1700" preserveAspectRatio="none" aria-hidden="true"><polygon id="poly" points=""/><g id="dots"></g></svg>
+        <div class="layer hidden" id="stripsLayer"></div>
+        <div class="layer hidden" id="signalLayer">
+          <div class="sig-head">
+            <h3 id="sigTitle">Digitised 12-lead ECG</h3>
+            <div class="key"><span><i style="background:var(--red)"></i>Recovered</span><label><input type="checkbox" id="showTrue" checked><i style="background:var(--blue)"></i>Original</label></div>
+          </div>
+          <svg id="ecg12" role="img" aria-label="Twelve recovered ECG leads on a time and voltage grid"></svg>
+        </div>
+        <div class="tooltip" id="tip"></div>
+      </div>
+      <div class="controls">
+        <button class="icon-btn" id="prevBtn" aria-label="Previous step"><svg viewBox="0 0 16 16"><path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+        <button class="icon-btn" id="playBtn" aria-label="Play all steps"><svg viewBox="0 0 16 16"><path d="M4 2.5v11L13 8z" fill="currentColor"/></svg></button>
+        <button class="icon-btn" id="nextBtn" aria-label="Next step"><svg viewBox="0 0 16 16"><path d="m6 3 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="results">
+  <div class="wrap">
+    <div class="kicker">Results</div>
+    <div class="stats" id="stats"></div>
+    <div class="res-grid">
+      <div class="panel">
+        <h3>Error drawn to scale</h3>
+        <svg id="scaleSvg" viewBox="0 0 520 300" role="img" aria-label="Average error band drawn on ECG paper at true scale"></svg>
+      </div>
+      <div class="panel" id="perLeadPanel">
+        <h3>Error per lead</h3>
+        <div class="bars" id="perLead"></div>
+        <div class="ref-lab">mV · line = average</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="automation">
+  <div class="wrap">
+    <div class="kicker">Pipeline automation</div>
+    <div class="auto">
+      <div><h3>Runs locally</h3><p>One command per scan or folder. No cloud, no API calls.</p></div>
+<pre><span class="c"># set up once</span>
+git clone https://github.com/rociomexiadiaz/Pixels2Physiology
+cd Pixels2Physiology
+pip install -r requirements.txt
+python scripts/download_weights.py
+
+<span class="c"># one scan, or a whole folder → one CSV per record</span>
+python scripts/digitise.py scan.png --fs 500 --figure
+python scripts/digitise.py scans/ --fs 500 --out out/</pre>
+    </div>
+  </div>
+</section>
+
+<section id="hood">
+  <div class="wrap">
+    <div class="kicker">Under the hood</div>
+    <div class="hood">
+
+      <div class="stage-card">
+        <div class="visual">
+          <div class="thumb-box"><img src="assets/diagram/orb.jpg" alt="ORB keypoint matches between a clean page and a photo of it"><span class="lab">clean original ⟷ damaged photo</span></div>
+        </div>
+        <div>
+          <div class="head"><span class="num">1</span><h3>ORB detection for mask generation</h3><span class="tag train">Training labels</span></div>
+          <ul class="spec">
+            <li><b>ORB</b> · 1,000 keypoints per image, binary descriptors</li>
+            <li><b>Match</b> · Hamming brute-force kNN, Lowe ratio 0.7 (<span id="orbN"></span> kept here)</li>
+            <li><b>Homography</b> · RANSAC, 5 px reprojection threshold</li>
+            <li><b>Label</b> · clean-page corners mapped into the photo → filled polygon = paper mask</li>
+            <li>No hand-drawn masks: every UNet-1 label is generated this way</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stage-card wide">
+        <div class="visual">
+          <div class="vrow">
+            <div class="thumb-box" style="flex:0 0 19%"><img id="u1in" alt="UNet-1 input"><span class="lab">in · 1×512×656</span></div>
+            <svg class="arrow" viewBox="0 0 26 16"><path d="M1 8h22M17 3l6 5-6 5" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <div style="flex:1"><svg class="unet-svg" id="unet1Svg" viewBox="0 0 520 250"></svg></div>
+            <svg class="arrow" viewBox="0 0 26 16"><path d="M1 8h22M17 3l6 5-6 5" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <div class="thumb-box" style="flex:0 0 19%"><img id="u1bg" alt=""><img id="u1out" alt="UNet-1 paper mask" style="position:absolute;inset:0;width:100%;height:100%"><span class="lab">out · paper mask</span></div>
+          </div>
+        </div>
+        <div class="info">
+          <div class="head"><span class="num">2</span><h3>UNet</h3><span class="tag ai">AI model</span></div>
+          <ul class="spec">
+            <li><b>5-level U-Net</b> · 64 → 128 → 256 → 512 → 1024 channels</li>
+            <li><b>Block</b> · (3×3 conv + ReLU) ×2 · 2×2 max-pool down · transposed conv up · skip concat</li>
+            <li><b>Input</b> · grayscale page padded to 1700×2200, downsampled to 512×656</li>
+            <li><b>Loss</b> · 0.5 BCE + 0.5 Dice · AdamW 1e-3 · 10 epochs · batch 8</li>
+            <li><b>Sampling</b> · photos with background oversampled ×3</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stage-card">
+        <div class="visual">
+          <div class="vrow">
+            <div class="thumb-box" style="flex:1;aspect-ratio:22/17"><img id="cropIn" alt="" style="position:absolute;inset:0;width:100%;height:100%"><svg id="cropPoly" viewBox="0 0 1 1" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%"></svg><span class="lab">contour → min-area rectangle</span></div>
+            <svg class="arrow" viewBox="0 0 26 16"><path d="M1 8h22M17 3l6 5-6 5" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <div class="thumb-box" style="flex:1"><img id="cropOut" alt=""><span class="lab">warped + rotated 180°</span></div>
+          </div>
+          <div class="hist-grid" id="histGrid"></div>
+        </div>
+        <div>
+          <div class="head"><span class="num">3</span><h3>Crop + rotation through histograms</h3></div>
+          <ul class="spec">
+            <li><b>Crop</b> · 15×15 morphological close → largest contour → <code>minAreaRect</code> → perspective warp to 2200×1700</li>
+            <li><b>Histogram</b> · ink pixels per row of each strip; baseline = busiest row</li>
+            <li><b>Test</b> · a real trace has ink beyond ±50 px of its baseline; a flat strip means "maybe upside down"</li>
+            <li><b>Rotate</b> · re-run at 180° and keep the orientation with more real strips (<span id="flipScore"></span> here)</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stage-card wide">
+        <div class="visual">
+          <div class="vrow">
+            <div class="chan-stack" style="flex:0 0 27%">
+              <div class="thumb-box"><img src="assets/diagram/strip_gray.jpg" alt=""><span class="lab">ch 1 · grayscale</span></div>
+              <div class="thumb-box"><img src="assets/diagram/strip_fft.jpg" alt=""><span class="lab">ch 2 · log |FFT|</span></div>
+            </div>
+            <svg class="arrow" viewBox="0 0 26 16"><path d="M1 8h22M17 3l6 5-6 5" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <div style="flex:1"><svg class="unet-svg" id="unet2Svg" viewBox="0 0 520 250"></svg></div>
+            <svg class="arrow" viewBox="0 0 26 16"><path d="M1 8h22M17 3l6 5-6 5" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <div class="thumb-box" style="flex:0 0 27%"><img src="assets/diagram/strip_ink.png" alt=""><span class="lab">out · ink mask</span></div>
+          </div>
+        </div>
+        <div class="info">
+          <div class="head"><span class="num">4</span><h3>Strips into UNet</h3><span class="tag ai">AI model</span></div>
+          <ul class="spec">
+            <li><b>Strips</b> · 4 fixed rows, each 384×2192 px</li>
+            <li><b>2 channels</b> · grayscale + log FFT magnitude: the printed grid is periodic, so it shows up as sharp peaks</li>
+            <li><b>Res-U-Net</b> · residual blocks (1×1 projection when channels change), 64 → 1024</li>
+            <li><b>CBAM</b> on every skip · channel attention (avg + max pool → MLP) then spatial (7×7 conv)</li>
+            <li><b>Targets</b> rendered from the true signal (78 px/mV, 196 px/s) · Dice + BCE · Adam 1e-4 · 40 epochs</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stage-card">
+        <div class="visual"><svg id="digSvg" role="img" aria-label="Zoomed ink mask with baseline and the pixel picked in each column"></svg></div>
+        <div>
+          <div class="head"><span class="num">5</span><h3>Digitise</h3></div>
+          <ul class="spec">
+            <li><b>Clean</b> · 2×2 morphological opening</li>
+            <li><b>Baseline</b> · median row of all ink pixels</li>
+            <li><b>Per column</b> · the ink pixel furthest from baseline, so peaks survive</li>
+            <li><b>Scale</b> · <code>mV = (baseline − y) × 0.5 / 39</code></li>
+            <li><b>Resample</b> · cubic spline to fs × 10 s; rows 1–3 split into four 2.5 s leads, row 4 is the 10 s rhythm lead II</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<footer><div class="wrap">Rocio Mexia Diaz · <a href="https://github.com/rociomexiadiaz/Pixels2Physiology">code</a> · data: PhysioNet 2025 ECG Image Digitisation Challenge (PTB-XL, CC BY 4.0)</div></footer>
+
+<script src="assets/data.js"></script>
+<script src="assets/diagram.js"></script>
+<script>
+(() => {
+const D = window.P2P, G = window.P2P_DIAGRAM;
+const $ = s => document.querySelector(s);
+const el = (t, a = {}, h = '') => { const e = document.createElement(t); for (const k in a) e.setAttribute(k, a[k]); if (h) e.innerHTML = h; return e; };
+const NS = 'http://www.w3.org/2000/svg';
+const sv = (t, a = {}) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); return e; };
+const fmt = (v, d = 2) => Number(v).toFixed(d);
+const M = D.metrics;
+
+/* ---------- hero line: a real recovered lead II ---------- */
+(function hero() {
+  // the sample whose recovered lead II has the clearest beats (largest swing)
+  const amp = s => s.leads.II ? Math.max(...s.leads.II.pred) - Math.min(...s.leads.II.pred) : 0;
+  const s = D.samples.reduce((a, b) => amp(b) > amp(a) ? b : a);
+  const y = s.leads.II.pred; const n = y.length;
+  const lo = Math.min(...y), hi = Math.max(...y);
+  let d = '';
+  y.forEach((v, i) => { d += (i ? 'L' : 'M') + (i / (n - 1) * 1200).toFixed(1) + ' ' + (110 - (v - lo) / (hi - lo) * 95).toFixed(1); });
+  $('#heroPath').setAttribute('d', d);
+})();
+
+/* ---------- problem collage ---------- */
+D.samples.slice(0, 3).forEach(s => $('#paperStack').append(el('img', { src: `assets/samples/${s.id}/input.jpg`, alt: '' })));
+
+/* ---------- pipeline cards ---------- */
+const STEPS = [
+  { t: 'Photo in', k: 'rule' },
+  { t: 'Find the paper', k: 'ai' },
+  { t: 'Flatten & rotate', k: 'rule' },
+  { t: 'Cut the strips', k: 'rule' },
+  { t: 'Lift the ink', k: 'ai' },
+  { t: 'Measure', k: 'rule' },
+];
+STEPS.forEach((s, i) => $('#flow').append(el('div', { class: 'flow-card' + (s.k === 'ai' ? ' ai' : '') }, `<div class="n">${i + 1}</div>${s.k === 'ai' ? '<span class="tag ai">AI model</span>' : ''}<h3>${s.t}</h3>`)));
+
+/* ---------- demo player ---------- */
+const stepsEl = $('#steps');
+STEPS.forEach((s, i) => {
+  const b = el('button', { class: 'step', 'data-i': i }, `<span class="kind ${s.k}"></span><small>Step ${i + 1}</small><strong>${s.t}</strong><span class="bar"></span>`);
+  b.onclick = () => { stop(); go(i); };
+  stepsEl.append(b);
+});
+
+const pick = $('#pick');
+D.samples.forEach((s, i) => pick.append(el('option', { value: i }, s.label || s.degradation)));
+pick.onchange = () => load(+pick.value, false);
+
+let cur = null, step = -1, timer = null, playing = false;
+const DUR = [1800, 2400, 2600, 2000, 2800, 4200];
+
+function photoRect(s) {
+  // photo box inside the 2200x1700 stage, in stage units
+  const A = 2200 / 1700, a = s.aspect;
+  let w = 2200, h = 1700;
+  if (a > A) h = 2200 / a; else w = 1700 * a;
+  return { x: (2200 - w) / 2, y: (1700 - h) / 2, w, h };
+}
+function placePhoto(s) {
+  const r = photoRect(s), box = $('#photoBox');
+  Object.assign(box.style, { left: r.x / 22 + '%', top: r.y / 17 + '%', width: r.w / 22 + '%', height: r.h / 17 + '%' });
+}
+function cornerPts(s, rotated) {
+  const r = photoRect(s);
+  return s.corners.map(([x, y]) => rotated ? [1 - x, 1 - y] : [x, y]).map(([x, y]) => [r.x + x * r.w, r.y + y * r.h]);
+}
+function setPoly(pts) {
+  $('#poly').setAttribute('points', pts.map(p => p.join(',')).join(' '));
+  const g = $('#dots'); g.innerHTML = '';
+  pts.forEach(p => g.append(sv('circle', { cx: p[0], cy: p[1], r: 16 })));
+}
+let polyAnim;
+function morphPoly(from, to, ms, done) {
+  cancelAnimationFrame(polyAnim);
+  const t0 = performance.now();
+  const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  (function f(now) {
+    const t = Math.min(1, (now - t0) / ms), e = ease(t);
+    setPoly(from.map((p, i) => [p[0] + (to[i][0] - p[0]) * e, p[1] + (to[i][1] - p[1]) * e]));
+    if (t < 1) polyAnim = requestAnimationFrame(f); else done && done();
+  })(t0);
+}
+const RECT = [[0, 0], [2200, 0], [2200, 1700], [0, 1700]];
+
+function load(i, autoplay) {
+  cur = D.samples[i];
+  pick.value = i;
+  const base = `assets/samples/${cur.id}/`;
+  $('#photoImg').src = base + 'input.jpg';
+  $('#maskImg').src = base + 'mask.png';
+  $('#pageImg').src = base + 'page.jpg';
+  placePhoto(cur);
+  const sl = $('#stripsLayer'); sl.innerHTML = '';
+  for (let k = 0; k < 4; k++) sl.append(el('div', { class: 'strip-row' }, `<img class="grid-img" src="${base}strip${k}.jpg" alt=""><img class="ink-img" src="${base}ink${k}.png" alt="">`));
+  const bx = $('#boxes'); bx.innerHTML = '';
+  cur.strip_rows.forEach(([a, b], k) => {
+    const d = el('div', { class: 'strip-box' }, `<i>${k < 3 ? 'Row ' + (k + 1) : 'Rhythm strip'}</i>`);
+    Object.assign(d.style, { top: a * 100 + '%', height: (b - a) * 100 + '%' }); bx.append(d);
+  });
+  step = -1;
+  if (autoplay) play(); else go(0);
+}
+
+function show(id, on) { $(id).classList.toggle('hidden', !on); }
+
+function go(i) {
+  if (!cur) return;
+  const prev = step; step = i;
+  document.querySelectorAll('.step').forEach((b, j) => {
+    b.classList.toggle('done', j < i); b.classList.remove('active');
+    if (j === i) { b.style.setProperty('--dur', (playing ? DUR[j] : 1) + 'ms'); void b.offsetWidth; b.classList.add('active'); }
+  });
+  $('#nextBig').disabled = i >= 5;
+  $('#nextBig').firstChild.textContent = i < 0 ? 'Start ' : 'Next step ';
+  const rotated = cur.flipped && i >= 2;
+  // reset layers
+  show('#photoLayer', i <= 2); show('#pageLayer', i === 2 || i === 3); show('#stripsLayer', i === 4); show('#signalLayer', i === 5);
+  $('#photoBox').style.transform = rotated ? 'rotate(180deg)' : 'none';
+  $('#maskImg').classList.toggle('on', i >= 1 && i <= 2);
+  $('#flipNote').classList.remove('on');
+  document.querySelectorAll('.strip-box').forEach(b => b.classList.remove('on'));
+  document.querySelectorAll('.strip-row').forEach(b => b.classList.remove('on'));
+  $('#overlay').style.opacity = (i === 1 || i === 2) && cur.corners ? 1 : 0;
+  cancelAnimationFrame(polyAnim);
+
+  if (i === 1 && cur.corners) {
+    const pts = cornerPts(cur, false);
+    setPoly(pts); $('#poly').style.strokeDasharray = 9000; $('#poly').style.strokeDashoffset = 9000;
+    requestAnimationFrame(() => { $('#poly').style.transition = 'stroke-dashoffset 1.3s ease .5s'; $('#poly').style.strokeDashoffset = 0; });
+  }
+  if (i === 2) {
+    $('#poly').style.transition = 'none'; $('#poly').style.strokeDashoffset = 0;
+    $('#pageLayer').classList.add('hidden');
+    const flipDelay = cur.flipped ? 1200 : 0;
+    if (cur.flipped) { $('#photoBox').style.transform = 'none'; $('#flipNote').classList.add('on');
+      requestAnimationFrame(() => requestAnimationFrame(() => { $('#photoBox').style.transform = 'rotate(180deg)'; })); }
+    if (cur.corners) setPoly(cornerPts(cur, false));
+    if (cur.flipped) $('#overlay').style.opacity = 0;   // outline hides while the photo turns
+    setTimeout(() => {
+      if (step !== 2) return;
+      $('#flipNote').classList.remove('on');
+      $('#overlay').style.opacity = cur.corners ? 1 : 0;
+      const from = cur.corners ? cornerPts(cur, cur.flipped) : RECT;
+      $('#photoLayer').classList.add('hidden'); $('#pageLayer').classList.remove('hidden');
+      morphPoly(from, RECT, 900, () => { if (step === 2) $('#overlay').style.opacity = 0; });
+    }, flipDelay + 250);
+  }
+  if (i === 3) document.querySelectorAll('.strip-box').forEach((b, k) => setTimeout(() => step === 3 && b.classList.add('on'), 200 + k * 280));
+  if (i === 4) document.querySelectorAll('.strip-row').forEach((b, k) => setTimeout(() => step === 4 && b.classList.add('on'), 250 + k * 380));
+  if (i === 5) { draw12(true); $('#sigTitle').innerHTML = `Digitised 12-lead ECG <span class="muted" style="font:500 14px Inter">· average error ${fmt(cur.mean_rmse)} mV · ${cur.n_leads}/12 leads</span>`; }
+
+  if (playing) { clearTimeout(timer); timer = setTimeout(() => { if (step < 5) go(step + 1); else stop(); }, DUR[i]); }
+}
+function play() { playing = true; go(0); }
+function stop() { playing = false; clearTimeout(timer); }
+$('#playBtn').onclick = () => cur && play();
+$('#nextBtn').onclick = $('#nextBig').onclick = () => { stop(); cur && go(Math.min(5, step + 1)); };
+$('#prevBtn').onclick = () => { stop(); cur && go(Math.max(0, step - 1)); };
+
+/* ---------- 12-lead chart, laid out like the printout ---------- */
+const ORDER = ['I', 'II', 'III', 'aVR', 'aVL', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6'];
+const ROWS = [['I', 'aVR', 'V1', 'V4'], ['II', 'aVL', 'V2', 'V5'], ['III', 'aVF', 'V3', 'V6'], ['II']];
+$('#showTrue').onchange = () => step === 5 && draw12(false);
+function draw12(animate) {
+  const svg = $('#ecg12'); svg.innerHTML = '';
+  const W = svg.clientWidth || 900, H = svg.clientHeight || 520;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const pad = { l: 44, r: 10, t: 6, b: 24 }, T = 10, rowH = (H - pad.t - pad.b) / 4, MV = 1.5; // +-1.5 mV visible per row
+  const x = t => pad.l + t / T * (W - pad.l - pad.r);
+  const yr = (r, v) => pad.t + rowH * r + rowH / 2 - v / MV * (rowH / 2);
+  const showTrue = $('#showTrue').checked, fs = cur.fs_plot;
+  // ECG paper: minor 0.04 s / 0.1 mV, major 0.2 s / 0.5 mV
+  const g = sv('g'); const pxs = (W - pad.l - pad.r) / T, pxmv = rowH / 2 / MV;
+  const minor = pxs * .04 >= 4;
+  for (let t = 0; t <= T + 1e-6; t += minor ? .04 : .2) { const maj = Math.abs(t / .2 - Math.round(t / .2)) < 1e-6; g.append(sv('line', { x1: x(t), x2: x(t), y1: pad.t, y2: H - pad.b, class: maj ? 'g-maj' : 'g-min' })); }
+  const vstep = pxmv * .1 >= 4 ? .1 : .5;
+  for (let r = 0; r < 4; r++) for (let v = -MV; v <= MV + 1e-6; v += vstep) { const maj = Math.abs(v * 2 - Math.round(v * 2)) < 1e-6; g.append(sv('line', { x1: pad.l, x2: W - pad.r, y1: yr(r, v), y2: yr(r, v), class: maj ? 'g-maj' : 'g-min' })); }
+  svg.append(g);
+  const txt = (x0, y0, t, cls = '', anchor = 'start') => { const e = sv('text', { x: x0, y: y0, class: cls, 'text-anchor': anchor }); e.textContent = t; svg.append(e); return e; };
+  // voltage scale per row, time scale along the bottom
+  for (let r = 0; r < 4; r++) { [-1, 0, 1].forEach(v => txt(pad.l - 6, yr(r, v) + 4, (v > 0 ? '+' : '') + v, '', 'end')); }
+  txt(4, pad.t + 11, 'mV');
+  for (let t = 0; t <= T; t++) txt(x(t), H - 7, t + (t === T ? ' s' : ''), '', 'middle');
+  const segs = [];
+  ROWS.forEach((names, r) => names.forEach((n, c) => {
+    const L = cur.leads[n]; const t0 = r === 3 ? 0 : c * 2.5;
+    txt(x(t0) + 4, yr(r, MV) + 13, r === 3 ? 'II (rhythm, 10 s)' : n, 'lead-lab');
+    if (!L) { txt(x(t0) + 4, yr(r, 0), 'not recovered', 'rm'); return; }
+    txt(x(t0) + 4, yr(r, MV) + 25, `error ${fmt(L.rmse)} mV`, 'rm');
+    if (r < 3 && c > 0) svg.append(sv('line', { x1: x(t0), x2: x(t0), y1: yr(r, .35), y2: yr(r, -.35), stroke: '#1d2330', 'stroke-width': 1.2 }));
+    segs.push({ L, r, t0, n: r === 3 ? 'II (rhythm)' : n });
+  }));
+  const path = (arr, r, t0) => arr.map((v, i) => (i ? 'L' : 'M') + x(t0 + i / fs).toFixed(1) + ' ' + yr(r, Math.max(-MV, Math.min(MV, v))).toFixed(1)).join('');
+  segs.forEach(({ L, r, t0 }, k) => {
+    const layers = showTrue ? [['true', 'var(--blue)'], ['pred', 'var(--red)']] : [['pred', 'var(--red)']];
+    layers.forEach(([key, c], j) => {
+      const p = sv('path', { d: path(L[key], r, t0), class: 'series', stroke: c, opacity: key === 'true' ? .85 : 1 }); svg.append(p);
+      if (animate) { const len = p.getTotalLength(); p.style.strokeDasharray = len; p.style.strokeDashoffset = len; p.getBoundingClientRect(); p.style.transition = `stroke-dashoffset 1.1s ease ${(r * .35 + (r < 3 ? t0 / 2.5 * .12 : 0) + j * .15).toFixed(2)}s`; p.style.strokeDashoffset = 0; }
+    });
+  });
+  // hover: crosshair + values for the lead under the pointer
+  const hl = sv('line', { class: 'hover-line', opacity: 0 }); svg.append(hl);
+  const dots = ['var(--blue)', 'var(--red)'].map(c => { const d = sv('circle', { r: 4, fill: c, stroke: '#fff', 'stroke-width': 2, opacity: 0 }); svg.append(d); return d; });
+  const hit = sv('rect', { x: pad.l, y: pad.t, width: W - pad.l - pad.r, height: H - pad.t - pad.b, fill: 'transparent' }); svg.append(hit);
+  const tip = $('#tip');
+  const hide = () => { tip.style.opacity = 0; hl.setAttribute('opacity', 0); dots.forEach(d => d.setAttribute('opacity', 0)); };
+  const move = ev => {
+    const R = svg.getBoundingClientRect(), p = ev.touches ? ev.touches[0] : ev;
+    const px = (p.clientX - R.left) * W / R.width, py = (p.clientY - R.top) * H / R.height;
+    const r = Math.max(0, Math.min(3, Math.floor((py - pad.t) / rowH)));
+    const t = (px - pad.l) / (W - pad.l - pad.r) * T;
+    const sg = segs.find(s => s.r === r && t >= s.t0 && t < s.t0 + (r === 3 ? 10 : 2.5));
+    if (!sg) return hide();
+    const i = Math.max(0, Math.min(sg.L.pred.length - 1, Math.round((t - sg.t0) * fs)));
+    const X = x(sg.t0 + i / fs);
+    hl.setAttribute('x1', X); hl.setAttribute('x2', X); hl.setAttribute('y1', yr(r, MV)); hl.setAttribute('y2', yr(r, -MV)); hl.setAttribute('opacity', 1);
+    const vt = sg.L.true[i], vp = sg.L.pred[i];
+    [[dots[0], showTrue ? vt : null], [dots[1], vp]].forEach(([d, v]) => { if (v == null) return d.setAttribute('opacity', 0); d.setAttribute('cx', X); d.setAttribute('cy', yr(r, Math.max(-MV, Math.min(MV, v)))); d.setAttribute('opacity', 1); });
+    tip.innerHTML = `<b>${sg.n}</b> · ${fmt(sg.t0 + i / fs)} s<br><i style="background:var(--red)"></i>recovered ${vp != null ? fmt(vp) : '–'} mV` + (showTrue ? `<br><i style="background:var(--blue)"></i>original ${vt != null ? fmt(vt) : '–'} mV` : '');
+    const sr = $('#stage').getBoundingClientRect(), sx = R.width / W, sy = R.height / H;
+    tip.style.left = Math.min(R.left - sr.left + X * sx + 12, sr.width - 180) + 'px';
+    tip.style.top = Math.max(4, R.top - sr.top + yr(r, MV) * sy - 4) + 'px'; tip.style.opacity = 1;
+  };
+  hit.addEventListener('mousemove', move); hit.addEventListener('touchmove', move, { passive: true }); hit.addEventListener('mouseleave', hide);
+}
+window.addEventListener('resize', () => { if (step === 5) draw12(false); });
+
+
+/* ---------- results ---------- */
+const mv = M.mean_rmse_mv;
+[[fmt(mv), 'mV', 'average error per lead'], [`≈${Math.round(mv / .1)}`, 'mm', 'on standard ECG paper']]
+  .forEach(([b, u, t]) => $('#stats').append(el('div', { class: 'stat' }, `<b>${b}<small>${u}</small></b><span>${t}</span>`)));
+
+(function scale() {
+  const s = $('#scaleSvg'); const W = 520, H = 300, px = 40; // 40 px = 1 big square = 0.5 mV / 0.2 s
+  for (let gx = 0; gx <= W; gx += 8) s.append(sv('line', { x1: gx, x2: gx, y1: 0, y2: H, stroke: gx % px ? '#f4dedb' : '#e7bcb7', 'stroke-width': 1 }));
+  for (let gy = 0; gy <= H; gy += 8) s.append(sv('line', { x1: 0, x2: W, y1: gy, y2: gy, stroke: gy % px ? '#f4dedb' : '#e7bcb7', 'stroke-width': 1 }));
+  const beat = t => { const g = (m, w, a) => a * Math.exp(-((t - m) ** 2) / (2 * w * w)); return g(.18, .025, .15) + g(.36, .008, -.12) + g(.40, .011, 1.3) + g(.44, .009, -.3) + g(.68, .045, .3); };
+  const base = 200, mvpx = px / .5, spx = px / .2;
+  const pts = []; for (let t = 0; t <= 1.3; t += .002) pts.push([t * spx, base - beat(t) * mvpx]);
+  const band = mv * mvpx;
+  const up = pts.map(([a, b]) => `${a},${b - band}`), dn = pts.slice().reverse().map(([a, b]) => `${a},${b + band}`);
+  s.append(sv('polygon', { points: up.concat(dn).join(' '), fill: 'rgba(224,49,75,.18)' }));
+  s.append(sv('path', { d: 'M' + pts.map(p => p.join(',')).join('L'), fill: 'none', stroke: 'var(--blue)', 'stroke-width': 2 }));
+  const lab = (x, y, t, a = 'start') => { const e = sv('text', { x, y, 'text-anchor': a, style: 'font:12px Inter;fill:#4a5263' }); e.textContent = t; s.append(e); };
+  s.append(sv('line', { x1: 460, x2: 460, y1: base - band, y2: base + band, stroke: 'var(--red)', 'stroke-width': 2 }));
+  lab(452, base - band - 6, `±${fmt(mv)} mV`, 'end');
+})();
+
+(function perLead() {
+  const rows = Object.entries(M.per_lead).map(([k, v]) => [k, v.rmse]).sort((a, b) => a[1] - b[1]);
+  const max = Math.max(...rows.map(r => r[1])) * 1.06;
+  rows.forEach(([k, v]) => $('#perLead').append(el('div', { class: 'bar-row', title: `${k}: ${fmt(v, 3)} mV` },
+    `<b>${k}</b><div class="track"><div class="fill" style="width:${v / max * 100}%"></div><div class="ref-line" style="left:${mv / max * 100}%"></div></div><span class="v">${fmt(v)}</span>`)));
+  new IntersectionObserver((es, o) => es.forEach(e => { if (e.isIntersecting) { $('#perLeadPanel').classList.add('in-view'); o.disconnect(); } }), { threshold: .3 }).observe($('#perLeadPanel'));
+})();
+
+/* ---------- under the hood ---------- */
+function unet(svgId, { res = false, cbam = false, inCh = 1 }) {
+  const s = $(svgId), CH = [64, 128, 256, 512, 1024];
+  const H = [150, 112, 80, 54, 34], top = l => 20 + l * 36;
+  const xs = [30, 88, 146, 204, 262, 320, 378, 436, 494];
+  const w = c => 9 + Math.log2(c / 64) * 3.2;
+  const marker = sv('marker', { id: svgId.slice(1) + 'm', viewBox: '0 0 8 8', refX: 7, refY: 4, markerWidth: 6, markerHeight: 6, orient: 'auto' });
+  marker.append(sv('path', { d: 'M0 0L8 4L0 8z', fill: '#7b8293' }));
+  const defs = sv('defs'); defs.append(marker); s.append(defs);
+  const mk = `url(#${svgId.slice(1)}m)`;
+  const blocks = [];
+  for (let l = 0; l < 5; l++) blocks.push({ x: xs[l], l });
+  for (let l = 3; l >= 0; l--) blocks.push({ x: xs[8 - l], l });
+  // skips
+  for (let l = 0; l < 4; l++) {
+    const y = top(l) + 14, x1 = xs[l] + w(CH[l]) / 2, x2 = xs[8 - l] - w(CH[l]) / 2;
+    s.append(sv('line', { x1, x2: x2 - 2, y1: y, y2: y, stroke: '#9aa1b1', 'stroke-width': 1.3, 'stroke-dasharray': '4 3', 'marker-end': mk }));
+    if (cbam) {
+      const cx = (xs[l] + xs[8 - l]) / 2;
+      s.append(sv('rect', { x: cx - 19, y: y - 8, width: 38, height: 16, rx: 8, fill: '#efeafd', stroke: '#6a4bd6', 'stroke-width': 1 }));
+      const t = sv('text', { x: cx, y: y + 4, 'text-anchor': 'middle', style: 'font:600 9px Inter;fill:#6a4bd6' }); t.textContent = 'CBAM'; s.append(t);
+    }
+  }
+  // down / up arrows
+  for (let l = 0; l < 4; l++) {
+    s.append(sv('path', { d: `M${xs[l] + 4} ${top(l) + H[l] + 4} L${xs[l + 1] - 6} ${top(l + 1) + H[l + 1] / 2}`, fill: 'none', stroke: '#7b8293', 'stroke-width': 1.3, 'marker-end': mk }));
+    s.append(sv('path', { d: `M${xs[8 - l - 1] + 6} ${top(l + 1) + H[l + 1] / 2} L${xs[8 - l] - 4} ${top(l) + H[l] + 4}`, fill: 'none', stroke: '#7b8293', 'stroke-width': 1.3, 'marker-end': mk }));
+  }
+  blocks.forEach(({ x, l }) => {
+    const ww = w(CH[l]);
+    s.append(sv('rect', { x: x - ww / 2, y: top(l), width: ww, height: H[l], rx: 3, fill: res ? '#6a4bd6' : '#8a74e0', opacity: x === xs[4] ? 1 : .85 }));
+    const t = sv('text', { x, y: top(l) + H[l] + 13, 'text-anchor': 'middle' }); t.textContent = CH[l]; s.append(t);
+  });
+  const lab = (x, y, t, cls = '') => { const e = sv('text', { x, y, 'text-anchor': 'middle', class: cls }); e.textContent = t; s.append(e); };
+  lab(xs[0], 12, `in · ${inCh} ch`, 'big'); lab(xs[8], 12, 'out · 1 ch', 'big');
+  lab(xs[4], top(4) - 6, res ? 'ResBlock' : 'DoubleConv', 'big');
+  lab(118, 244, '↘ max-pool 2×2'); lab(260, 244, '- - → skip'); lab(404, 244, '↗ up-conv 2×2');
+}
+unet('#unet1Svg', { inCh: 1 });
+unet('#unet2Svg', { res: true, cbam: true, inCh: 2 });
+
+$('#orbN').textContent = G.orb_matches;
+(function stage2and3() {
+  const s = D.samples.find(x => x.flipped) || D.samples[0];
+  const m = D.samples[0];
+  $('#u1in').src = $('#u1bg').src = `assets/samples/${m.id}/input.jpg`;
+  $('#u1out').src = `assets/samples/${m.id}/mask.png`;
+  $('#cropIn').src = `assets/samples/${s.id}/input.jpg`;
+  $('#cropOut').src = `assets/samples/${s.id}/page.jpg`;
+  if (s.corners) {
+    const p = $('#cropPoly');
+    p.append(sv('polygon', { points: s.corners.map(c => c.join(',')).join(' '), fill: 'rgba(224,49,75,.08)', stroke: '#e0314b', 'stroke-width': .012, 'vector-effect': 'non-scaling-stroke', style: 'stroke-width:3px' }));
+  }
+  const O = G.orientation;
+  $('#flipScore').textContent = `${O.score_before}/4 → ${O.score_after}/4`;
+  const grid = $('#histGrid');
+  [['before', 'Read as received (upside down)'], ['after', 'After 180°']].forEach(([k, title]) => {
+    const col = el('div'); col.append(el('h4', {}, `${title} · ${k === 'before' ? O.score_before : O.score_after}/4 strips real`));
+    O[k].forEach((h, i) => {
+      const W = 240, Hh = 46, n = h.hist.length, mx = Math.max(...h.hist, 1);
+      const svg = sv('svg', { viewBox: `0 0 ${W} ${Hh}`, class: 'hist-svg' });
+      // rows run left→right (top of strip → bottom), bar height = ink in that row
+      const x = r => 30 + r / n * (W - 70);
+      const b0 = x(Math.max(0, h.baseline - O.margin)), b1 = x(Math.min(n, h.baseline + O.margin));
+      svg.append(sv('rect', { x: b0, y: 2, width: b1 - b0, height: Hh - 14, fill: '#f3eee5' }));
+      let d = '';
+      h.hist.forEach((v, r) => { if (v) d += `M${x(r).toFixed(1)} ${Hh - 12}V${(Hh - 12 - Math.sqrt(v / mx) * (Hh - 16)).toFixed(1)}`; });
+      svg.append(sv('path', { d, stroke: '#e0314b', 'stroke-width': .9 }));
+      svg.append(sv('line', { x1: x(h.baseline), x2: x(h.baseline), y1: 2, y2: Hh - 12, stroke: '#1d2330', 'stroke-width': 1 }));
+      const t = sv('text', { x: 0, y: 20 }); t.textContent = `row ${i + 1}`; svg.append(t);
+      const ok = sv('text', { x: W - 4, y: 20, 'text-anchor': 'end', style: `font:600 11px Inter;fill:${h.upright ? '#2f7d2f' : '#e0314b'}` }); ok.textContent = h.upright ? '✓ trace' : '✗ flat'; svg.append(ok);
+      if (i === 3) { const lt = sv('text', { x: 30, y: Hh - 1 }); lt.textContent = 'row of strip → (shaded = baseline ± 50 px)'; svg.append(lt); }
+      col.append(svg);
+    });
+    grid.append(col);
+  });
+})();
+
+(function digitise() {
+  const g = G.digitise, s = $('#digSvg');
+  const rows = g.r1 - g.r0, cell = Math.min(4, 360 / rows), W = g.w * cell, H = rows * cell;
+  const padL = 46, padT = 22, outW = 230;
+  s.setAttribute('viewBox', `0 0 ${padL + W + 40 + outW} ${padT + H + 28}`);
+  const gx = c => padL + c * cell, gy = r => padT + r * cell;
+  s.append(sv('rect', { x: gx(0), y: gy(0), width: W, height: H, fill: '#faf8f5', stroke: '#e6dfd3' }));
+  let d = '';
+  g.ink.forEach((col, c) => col.forEach(r => { d += `M${gx(c)} ${gy(r)}h${cell}v${cell}h${-cell}z`; }));
+  s.append(sv('path', { d, fill: '#f6b9c3' }));
+  s.append(sv('line', { x1: gx(0), x2: gx(g.w), y1: gy(g.baseline) + cell / 2, y2: gy(g.baseline) + cell / 2, stroke: '#2e6fb5', 'stroke-width': 1.5, 'stroke-dasharray': '5 3' }));
+  let p = '';
+  g.picked.forEach((r, c) => { if (r == null) return; p += (p ? 'L' : 'M') + (gx(c) + cell / 2) + ' ' + (gy(r) + cell / 2); });
+  s.append(sv('path', { d: p, fill: 'none', stroke: '#e0314b', 'stroke-width': 1.6 }));
+  g.picked.forEach((r, c) => { if (r != null && c % 3 === 0) s.append(sv('circle', { cx: gx(c) + cell / 2, cy: gy(r) + cell / 2, r: 1.8, fill: '#b3112b' })); });
+  const T = (x, y, t, a = 'start', st = '') => { const e = sv('text', { x, y, 'text-anchor': a, style: st }); e.textContent = t; s.append(e); };
+  T(gx(0), padT - 8, 'ink mask, zoomed (1 square = 1 pixel)');
+  T(gx(g.w) - 2, gy(g.baseline) - 4, 'baseline (median)', 'end', 'fill:#2e6fb5;font:600 10.5px Inter');
+  T(padL - 6, gy(g.baseline) + 4, '0 mV', 'end');
+  // mV axis ticks
+  [-1, 1].forEach(v => { const r = g.baseline - v / g.mv_per_px; if (r >= 0 && r <= rows) T(padL - 6, gy(r) + 4, (v > 0 ? '+' : '') + v + ' mV', 'end'); });
+  // right: the resulting signal
+  const ox = padL + W + 40, mid = padT + H / 2;
+  s.append(sv('path', { d: `M${ox - 32} ${mid}h22M${ox - 16} ${mid - 5}l6 5-6 5`, fill: 'none', stroke: '#7b8293', 'stroke-width': 1.6 }));
+  const vals = g.picked.map(r => r == null ? null : (g.baseline - r) * g.mv_per_px);
+  const vmin = Math.min(...vals.filter(v => v != null)), vmax = Math.max(...vals.filter(v => v != null));
+  const sy = v => padT + 8 + (vmax - v) / (vmax - vmin || 1) * (H - 16);
+  for (let k = 0; k <= 10; k++) s.append(sv('line', { x1: ox + k * outW / 10, x2: ox + k * outW / 10, y1: padT, y2: padT + H, stroke: '#f4dedb' }));
+  let q = ''; vals.forEach((v, c) => { if (v == null) return; q += (q ? 'L' : 'M') + (ox + c / (g.w - 1) * outW).toFixed(1) + ' ' + sy(v).toFixed(1); });
+  s.append(sv('path', { d: q, fill: 'none', stroke: '#e0314b', 'stroke-width': 2, 'stroke-linejoin': 'round' }));
+  T(ox, padT - 8, 'signal (mV)');
+  T(ox, padT + H + 18, 'mV = (baseline − y) × 0.5 / 39');
+})();
+
+// deep links: ?s=<sample index>&step=<0-5>
+const q = new URLSearchParams(location.search);
+if (q.has('static')) document.body.classList.add('static');   // screenshots / no motion
+load(Math.min(+(q.get('s') || 0), D.samples.length - 1), false);
+if (q.has('step')) { const k = +q.get('step'); setTimeout(() => go(k), 50); }
+})();
+</script>
+</body>
+</html>

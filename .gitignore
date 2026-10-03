@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+weights/*.pth
+out/
+.DS_Store
+results/

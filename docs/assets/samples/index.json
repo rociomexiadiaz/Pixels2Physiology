@@ -1,0 +1,56 @@
+[
+ {
+  "id": "3002700944-6",
+  "label": "Photographed off a monitor",
+  "degradation": "Phone photo of a screen",
+  "flipped": false,
+  "mean_rmse": 0.1192,
+  "n_leads": 12,
+  "runtime_s": 6.75
+ },
+ {
+  "id": "1962423499-10",
+  "label": "Upside-down, damaged printout",
+  "degradation": "Damaged printout",
+  "flipped": true,
+  "mean_rmse": 0.2538,
+  "n_leads": 12,
+  "runtime_s": 6.67
+ },
+ {
+  "id": "3201760749-10",
+  "label": "Mouldy, filthy printout",
+  "degradation": "Damaged printout",
+  "flipped": false,
+  "mean_rmse": 0.2454,
+  "n_leads": 12,
+  "runtime_s": 6.65
+ },
+ {
+  "id": "4277304092-5",
+  "label": "Phone photo of a printout",
+  "degradation": "Phone photo of a printout",
+  "flipped": false,
+  "mean_rmse": 0.1053,
+  "n_leads": 12,
+  "runtime_s": 6.65
+ },
+ {
+  "id": "3563585176-9",
+  "label": "Stained photo on a desk",
+  "degradation": "Stained photo, sideways",
+  "flipped": false,
+  "mean_rmse": 0.1034,
+  "n_leads": 12,
+  "runtime_s": 6.66
+ },
+ {
+  "id": "1632590593-12",
+  "label": "Mouldy black & white scan",
+  "degradation": "Mould, black & white scan",
+  "flipped": false,
+  "mean_rmse": 0.1076,
+  "n_leads": 12,
+  "runtime_s": 6.65
+ }
+]
