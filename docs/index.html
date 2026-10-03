@@ -66,7 +66,8 @@ section{padding:72px 0;border-top:1px solid var(--line)}
 .flow-card:not(:last-child)::after{content:"";position:absolute;right:-10px;top:30px;width:8px;height:8px;border-top:2px solid var(--ink-3);border-right:2px solid var(--ink-3);transform:rotate(45deg)}
 
 /* ---------- demo ---------- */
-#demo{background:var(--paper-2)}
+#demo{background:var(--paper-2);padding:28px 0 32px}
+.stage{margin:0 auto}
 .app-bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
 .app-bar label{font-weight:600;font-size:14px}
 .select{appearance:none;font:500 16px Inter;color:var(--ink);background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%231d2330' stroke-width='2' fill='none'/%3E%3C/svg%3E") no-repeat right 14px center;border:1px solid var(--line);border-radius:12px;padding:12px 40px 12px 14px;min-width:280px;max-width:100%;cursor:pointer}
@@ -101,13 +102,17 @@ section{padding:72px 0;border-top:1px solid var(--line)}
 .strip-box{position:absolute;left:.4%;right:.4%;border:3px solid var(--red);border-radius:6px;background:rgba(224,49,75,.06);opacity:0;transform:translateX(-12px);transition:opacity .45s,transform .45s}
 .strip-box.on{opacity:1;transform:none}
 .strip-box i{position:absolute;left:8px;top:-1px;transform:translateY(-100%);background:var(--red);color:#fff;font:600 11px Inter;padding:2px 7px;border-radius:5px 5px 0 0;font-style:normal}
-#stripsLayer{display:flex;flex-direction:column;justify-content:center;gap:2.5%;padding:3%;background:#fff}
-.strip-row{position:relative;aspect-ratio:2192/384;width:100%}
-.strip-row img{position:absolute;inset:0;width:100%;height:100%}
-.strip-row .grid-img{transition:opacity 1s ease}
-.strip-row .ink-img{clip-path:inset(0 100% 0 0);transition:clip-path 1.2s ease}
-.strip-row.on .grid-img{opacity:.13}
-.strip-row.on .ink-img{clip-path:inset(0 0 0 0)}
+#ecg12 .g-grid,#ecg12 .g-lab,#ecg12 .g-red,#ecg12 .g-blue{transition:opacity .9s ease}
+#ecg12 .g-strip,#ecg12 .g-ink{transition:opacity .9s ease}
+#ecg12 .g-strip image{transition:opacity 1s ease}
+#ecg12 .g-ink image{clip-path:inset(0 100% 0 0);transition:clip-path 1.2s ease}
+#ecg12 .g-ink image.on{clip-path:inset(0 0 0 0)}
+#ecg12 .g-strip image.dim{opacity:.13}
+#ecg12.mode-ink .g-grid,#ecg12.mode-ink .g-lab,#ecg12.mode-ink .g-red,#ecg12.mode-ink .g-blue{opacity:0}
+#ecg12.mode-ink .hit{pointer-events:none}
+#ecg12.mode-signal .g-strip,#ecg12.mode-signal .g-ink{opacity:0}
+#signalLayer.ink .sig-head{opacity:0}
+.sig-head{transition:opacity .9s ease}
 #signalLayer{background:#fff;padding:10px 12px 8px;display:flex;flex-direction:column}
 .sig-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:0 4px}
 .sig-head h3{font-size:16px}
@@ -162,7 +167,7 @@ pre .c{color:#8b93a7}
 .hood{display:grid;gap:18px}
 .stage-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;display:grid;grid-template-columns:1.45fr 1fr;gap:26px;align-items:center}
 .stage-card.wide{grid-template-columns:1fr}
-.stage-card.wide .spec{grid-template-columns:1fr 1fr}
+.stage-card.wide .spec{grid-template-columns:1fr 1fr;align-content:start}
 .stage-card.wide .info{display:grid;grid-template-columns:260px 1fr;gap:20px;align-items:start}
 .stage-card .head{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
 .stage-card .num{width:34px;height:34px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font:650 16px Fraunces;flex:none}
@@ -181,6 +186,7 @@ pre .c{color:#8b93a7}
 .unet-svg text{font:11px Inter;fill:var(--ink-2)}
 .unet-svg .big{font:600 11px Inter;fill:var(--ink)}
 .chan-stack{display:grid;gap:4px}
+.orb-labels{display:grid;grid-template-columns:905fr 60fr 905fr;margin-bottom:6px;font:600 13px Inter;color:var(--ink-2)}
 .hist-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin-top:12px}
 .hist-grid h4{margin:0 0 4px;font:600 12px Inter;color:var(--ink-2)}
 .hist-svg{width:100%;height:auto;display:block}
@@ -219,9 +225,8 @@ body.static .hero-ecg path{stroke-dashoffset:0}
     <div>
       <div class="kicker">The problem</div>
       <ul class="bullets">
-        <li>Paper ECGs are readable by a doctor</li>
-        <li>Not readable by AI<small>Models need the electrical signal, not a picture of it</small></li>
-        <li>Or expensive for AI to read accurately<small>Printouts, scans and photos, often stained, creased or upside down</small></li>
+        <li>Paper ECGs are readable by human doctors</li>
+        <li>Not readable (or very expensive) by AI</li>
       </ul>
     </div>
     <div class="paper-stack" id="paperStack" aria-hidden="true"></div>
@@ -255,7 +260,6 @@ body.static .hero-ecg path{stroke-dashoffset:0}
         </div>
         <div class="layer hidden" id="pageLayer"><img id="pageImg" alt="Flattened ECG page"><div id="boxes"></div></div>
         <svg id="overlay" viewBox="0 0 2200 1700" preserveAspectRatio="none" aria-hidden="true"><polygon id="poly" points=""/><g id="dots"></g></svg>
-        <div class="layer hidden" id="stripsLayer"></div>
         <div class="layer hidden" id="signalLayer">
           <div class="sig-head">
             <h3 id="sigTitle">Digitised 12-lead ECG</h3>
@@ -317,16 +321,15 @@ python scripts/digitise.py scans/ --fs 500 --out out/</pre>
 
       <div class="stage-card">
         <div class="visual">
-          <div class="thumb-box"><img src="assets/diagram/orb.jpg" alt="ORB keypoint matches between a clean page and a photo of it"><span class="lab">clean original ⟷ damaged photo</span></div>
+          <div class="orb-labels"><span>Original scan</span><span></span><span>Degraded image</span></div>
+          <div class="thumb-box"><img src="assets/diagram/orb.jpg" alt="ORB keypoint matches between a clean page and a photo of it"></div>
         </div>
         <div>
-          <div class="head"><span class="num">1</span><h3>ORB detection for mask generation</h3><span class="tag train">Training labels</span></div>
+          <div class="head"><span class="num">1</span><h3>ORB detection for mask generation</h3></div>
           <ul class="spec">
-            <li><b>ORB</b> · 1,000 keypoints per image, binary descriptors</li>
-            <li><b>Match</b> · Hamming brute-force kNN, Lowe ratio 0.7 (<span id="orbN"></span> kept here)</li>
-            <li><b>Homography</b> · RANSAC, 5 px reprojection threshold</li>
-            <li><b>Label</b> · clean-page corners mapped into the photo → filled polygon = paper mask</li>
-            <li>No hand-drawn masks: every UNet-1 label is generated this way</li>
+            <li>Extracted 1,000 ORB keypoints, matched via Hamming kNN</li>
+            <li>Projected corners into degraded space through homography</li>
+            <li>Filled polygon for mask</li>
           </ul>
         </div>
       </div>
@@ -344,11 +347,8 @@ python scripts/digitise.py scans/ --fs 500 --out out/</pre>
         <div class="info">
           <div class="head"><span class="num">2</span><h3>UNet</h3><span class="tag ai">AI model</span></div>
           <ul class="spec">
-            <li><b>5-level U-Net</b> · 64 → 128 → 256 → 512 → 1024 channels</li>
-            <li><b>Block</b> · (3×3 conv + ReLU) ×2 · 2×2 max-pool down · transposed conv up · skip concat</li>
-            <li><b>Input</b> · grayscale page padded to 1700×2200, downsampled to 512×656</li>
-            <li><b>Loss</b> · 0.5 BCE + 0.5 Dice · AdamW 1e-3 · 10 epochs · batch 8</li>
-            <li><b>Sampling</b> · photos with background oversampled ×3</li>
+            <li><b>Input</b> · greyscale, padded to 1700×2200, downsampled to 512×656</li>
+            <li><b>Output</b> · paper mask</li>
           </ul>
         </div>
       </div>
@@ -363,12 +363,10 @@ python scripts/digitise.py scans/ --fs 500 --out out/</pre>
           <div class="hist-grid" id="histGrid"></div>
         </div>
         <div>
-          <div class="head"><span class="num">3</span><h3>Crop + rotation through histograms</h3></div>
+          <div class="head"><span class="num">3</span><h3>Alignment</h3></div>
           <ul class="spec">
-            <li><b>Crop</b> · 15×15 morphological close → largest contour → <code>minAreaRect</code> → perspective warp to 2200×1700</li>
-            <li><b>Histogram</b> · ink pixels per row of each strip; baseline = busiest row</li>
-            <li><b>Test</b> · a real trace has ink beyond ±50 px of its baseline; a flat strip means "maybe upside down"</li>
-            <li><b>Rotate</b> · re-run at 180° and keep the orientation with more real strips (<span id="flipScore"></span> here)</li>
+            <li>Crop document with generated mask</li>
+            <li>Detect flipping with histograms and rotate if needed</li>
           </ul>
         </div>
       </div>
@@ -387,13 +385,10 @@ python scripts/digitise.py scans/ --fs 500 --out out/</pre>
           </div>
         </div>
         <div class="info">
-          <div class="head"><span class="num">4</span><h3>Strips into UNet</h3><span class="tag ai">AI model</span></div>
+          <div class="head"><span class="num">4</span><h3>UNet</h3><span class="tag ai">AI model</span></div>
           <ul class="spec">
-            <li><b>Strips</b> · 4 fixed rows, each 384×2192 px</li>
-            <li><b>2 channels</b> · grayscale + log FFT magnitude: the printed grid is periodic, so it shows up as sharp peaks</li>
-            <li><b>Res-U-Net</b> · residual blocks (1×1 projection when channels change), 64 → 1024</li>
-            <li><b>CBAM</b> on every skip · channel attention (avg + max pool → MLP) then spatial (7×7 conv)</li>
-            <li><b>Targets</b> rendered from the true signal (78 px/mV, 196 px/s) · Dice + BCE · Adam 1e-4 · 40 epochs</li>
+            <li><b>Input</b> · strips and FFT of strips</li>
+            <li><b>Output</b> · binary ink mask</li>
           </ul>
         </div>
       </div>
@@ -403,11 +398,9 @@ python scripts/digitise.py scans/ --fs 500 --out out/</pre>
         <div>
           <div class="head"><span class="num">5</span><h3>Digitise</h3></div>
           <ul class="spec">
-            <li><b>Clean</b> · 2×2 morphological opening</li>
-            <li><b>Baseline</b> · median row of all ink pixels</li>
-            <li><b>Per column</b> · the ink pixel furthest from baseline, so peaks survive</li>
-            <li><b>Scale</b> · <code>mV = (baseline − y) × 0.5 / 39</code></li>
-            <li><b>Resample</b> · cubic spline to fs × 10 s; rows 1–3 split into four 2.5 s leads, row 4 is the 10 s rhythm lead II</li>
+            <li>Morphological cleaning</li>
+            <li>Scaling <code>mV = (baseline − y) × 0.5 / 39</code></li>
+            <li>Resampling to original fs</li>
           </ul>
         </div>
       </div>
@@ -512,8 +505,7 @@ function load(i, autoplay) {
   $('#maskImg').src = base + 'mask.png';
   $('#pageImg').src = base + 'page.jpg';
   placePhoto(cur);
-  const sl = $('#stripsLayer'); sl.innerHTML = '';
-  for (let k = 0; k < 4; k++) sl.append(el('div', { class: 'strip-row' }, `<img class="grid-img" src="${base}strip${k}.jpg" alt=""><img class="ink-img" src="${base}ink${k}.png" alt="">`));
+  chartFor = null;
   const bx = $('#boxes'); bx.innerHTML = '';
   cur.strip_rows.forEach(([a, b], k) => {
     const d = el('div', { class: 'strip-box' }, `<i>${k < 3 ? 'Row ' + (k + 1) : 'Rhythm strip'}</i>`);
@@ -536,12 +528,11 @@ function go(i) {
   $('#nextBig').firstChild.textContent = i < 0 ? 'Start ' : 'Next step ';
   const rotated = cur.flipped && i >= 2;
   // reset layers
-  show('#photoLayer', i <= 2); show('#pageLayer', i === 2 || i === 3); show('#stripsLayer', i === 4); show('#signalLayer', i === 5);
+  show('#photoLayer', i <= 2); show('#pageLayer', i === 2 || i === 3); show('#signalLayer', i >= 4);
   $('#photoBox').style.transform = rotated ? 'rotate(180deg)' : 'none';
   $('#maskImg').classList.toggle('on', i >= 1 && i <= 2);
   $('#flipNote').classList.remove('on');
   document.querySelectorAll('.strip-box').forEach(b => b.classList.remove('on'));
-  document.querySelectorAll('.strip-row').forEach(b => b.classList.remove('on'));
   $('#overlay').style.opacity = (i === 1 || i === 2) && cur.corners ? 1 : 0;
   cancelAnimationFrame(polyAnim);
 
@@ -568,8 +559,8 @@ function go(i) {
     }, flipDelay + 250);
   }
   if (i === 3) document.querySelectorAll('.strip-box').forEach((b, k) => setTimeout(() => step === 3 && b.classList.add('on'), 200 + k * 280));
-  if (i === 4) document.querySelectorAll('.strip-row').forEach((b, k) => setTimeout(() => step === 4 && b.classList.add('on'), 250 + k * 380));
-  if (i === 5) { draw12(true); $('#sigTitle').innerHTML = `Digitised 12-lead ECG <span class="muted" style="font:500 14px Inter">· average error ${fmt(cur.mean_rmse)} mV · ${cur.n_leads}/12 leads</span>`; }
+  if (i >= 4) chartMode(i === 4 ? 'ink' : 'signal', prev);
+  if (i === 5) { $('#sigTitle').innerHTML = `Digitised 12-lead ECG <span class="muted" style="font:500 14px Inter">· average error ${fmt(cur.mean_rmse)} mV · ${cur.n_leads}/12 leads</span>`; }
 
   if (playing) { clearTimeout(timer); timer = setTimeout(() => { if (step < 5) go(step + 1); else stop(); }, DUR[i]); }
 }
@@ -582,70 +573,123 @@ $('#prevBtn').onclick = () => { stop(); cur && go(Math.max(0, step - 1)); };
 /* ---------- 12-lead chart, laid out like the printout ---------- */
 const ORDER = ['I', 'II', 'III', 'aVR', 'aVL', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6'];
 const ROWS = [['I', 'aVR', 'V1', 'V4'], ['II', 'aVL', 'V2', 'V5'], ['III', 'aVF', 'V3', 'V6'], ['II']];
-$('#showTrue').onchange = () => step === 5 && draw12(false);
-function draw12(animate) {
+let chartFor = null;
+$('#showTrue').onchange = () => { $('#ecg12 .g-blue') && ($('#ecg12 .g-blue').style.display = $('#showTrue').checked ? '' : 'none'); };
+
+// Steps 5 and 6 share one canvas. Step 5 places each strip's ink exactly where
+// step 6 draws its signal (same time axis, same mV scale, same baseline), so
+// moving to step 6 only fades in the grid and numbers and thins the trace.
+function chartMode(mode, prev) {
+  const svg = $('#ecg12');
+  const fresh = chartFor !== cur.id;
+  if (fresh) { buildChart(); chartFor = cur.id; }
+  $('#signalLayer').classList.toggle('ink', mode === 'ink');
+  if (mode === 'ink') {
+    svg.classList.remove('mode-signal'); svg.classList.add('mode-ink');
+    const inks = svg.querySelectorAll('.g-ink image'), grays = svg.querySelectorAll('.g-strip image');
+    inks.forEach(im => im.classList.remove('on')); grays.forEach(im => im.classList.remove('dim'));
+    inks.forEach((im, k) => setTimeout(() => { if (step === 4) { im.classList.add('on'); grays[k].classList.add('dim'); } }, 300 + k * 380));
+  } else {
+    if (fresh || prev !== 4) {   // arriving from elsewhere: no ink to morph from
+      svg.querySelectorAll('.g-ink image').forEach(im => im.classList.add('on'));
+    }
+    svg.classList.remove('mode-ink'); svg.classList.add('mode-signal');
+    const blue = svg.querySelector('.g-blue path.series') && svg.querySelectorAll('.g-blue path.series');
+    if (blue) blue.forEach(p => { const len = p.getTotalLength(); p.style.transition = 'none'; p.style.strokeDasharray = len; p.style.strokeDashoffset = len; p.getBoundingClientRect(); p.style.transition = 'stroke-dashoffset 1.4s ease .7s'; p.style.strokeDashoffset = 0; });
+  }
+}
+
+function buildChart() {
   const svg = $('#ecg12'); svg.innerHTML = '';
   const W = svg.clientWidth || 900, H = svg.clientHeight || 520;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  const pad = { l: 44, r: 10, t: 6, b: 24 }, T = 10, rowH = (H - pad.t - pad.b) / 4, MV = 1.5; // +-1.5 mV visible per row
-  const x = t => pad.l + t / T * (W - pad.l - pad.r);
+  const pad = { l: 44, r: 10, t: 6, b: 24 }, T = 10, rowH = (H - pad.t - pad.b) / 4, MV = 1.5; // +-1.5 mV per row
+  const plotW = W - pad.l - pad.r;
+  const x = t => pad.l + t / T * plotW;
   const yr = (r, v) => pad.t + rowH * r + rowH / 2 - v / MV * (rowH / 2);
-  const showTrue = $('#showTrue').checked, fs = cur.fs_plot;
+  const fs = cur.fs_plot, pxmv = rowH / 2 / MV;
+  const G = cls => { const g = sv('g', { class: cls }); svg.append(g); return g; };
+  const defs = sv('defs'); svg.append(defs);
+  const gStrip = G('g-strip'), gGrid = G('g-grid'), gInk = G('g-ink'), gLab = G('g-lab'), gBlue = G('g-blue'), gRed = G('g-red');
+  if (!$('#showTrue').checked) gBlue.style.display = 'none';
+
   // ECG paper: minor 0.04 s / 0.1 mV, major 0.2 s / 0.5 mV
-  const g = sv('g'); const pxs = (W - pad.l - pad.r) / T, pxmv = rowH / 2 / MV;
-  const minor = pxs * .04 >= 4;
-  for (let t = 0; t <= T + 1e-6; t += minor ? .04 : .2) { const maj = Math.abs(t / .2 - Math.round(t / .2)) < 1e-6; g.append(sv('line', { x1: x(t), x2: x(t), y1: pad.t, y2: H - pad.b, class: maj ? 'g-maj' : 'g-min' })); }
+  const minor = plotW / T * .04 >= 4;
+  for (let t = 0; t <= T + 1e-6; t += minor ? .04 : .2) { const maj = Math.abs(t / .2 - Math.round(t / .2)) < 1e-6; gGrid.append(sv('line', { x1: x(t), x2: x(t), y1: pad.t, y2: H - pad.b, class: maj ? 'g-maj' : 'g-min' })); }
   const vstep = pxmv * .1 >= 4 ? .1 : .5;
-  for (let r = 0; r < 4; r++) for (let v = -MV; v <= MV + 1e-6; v += vstep) { const maj = Math.abs(v * 2 - Math.round(v * 2)) < 1e-6; g.append(sv('line', { x1: pad.l, x2: W - pad.r, y1: yr(r, v), y2: yr(r, v), class: maj ? 'g-maj' : 'g-min' })); }
-  svg.append(g);
-  const txt = (x0, y0, t, cls = '', anchor = 'start') => { const e = sv('text', { x: x0, y: y0, class: cls, 'text-anchor': anchor }); e.textContent = t; svg.append(e); return e; };
-  // voltage scale per row, time scale along the bottom
-  for (let r = 0; r < 4; r++) { [-1, 0, 1].forEach(v => txt(pad.l - 6, yr(r, v) + 4, (v > 0 ? '+' : '') + v, '', 'end')); }
-  txt(4, pad.t + 11, 'mV');
-  for (let t = 0; t <= T; t++) txt(x(t), H - 7, t + (t === T ? ' s' : ''), '', 'middle');
+  for (let r = 0; r < 4; r++) for (let v = -MV; v <= MV + 1e-6; v += vstep) { const maj = Math.abs(v * 2 - Math.round(v * 2)) < 1e-6; gGrid.append(sv('line', { x1: pad.l, x2: W - pad.r, y1: yr(r, v), y2: yr(r, v), class: maj ? 'g-maj' : 'g-min' })); }
+
+  // the strips and their ink, mapped onto the signal axes
+  const base = `assets/samples/${cur.id}/`;
+  cur.strip_geom.forEach((g, r) => {
+    const cp = sv('clipPath', { id: `rowclip${r}` });
+    cp.append(sv('rect', { x: 0, y: pad.t + rowH * r, width: W, height: rowH }));
+    defs.append(cp);
+    const sx = plotW / Math.max(1, g.last - g.first), sy = cur.mv_per_px * pxmv;
+    const box = { x: x(0) - g.first * sx, y: yr(r, 0) - g.baseline * sy, width: g.w * sx, height: g.h * sy, preserveAspectRatio: 'none' };
+    // clip to the row in a wrapper: the CSS wipe on the image would override its own clip-path
+    const wrap = parent => { const w = sv('g', { 'clip-path': `url(#rowclip${r})` }); parent.append(w); return w; };
+    const gray = sv('image', box); gray.setAttribute('href', base + `strip${r}.jpg`); wrap(gStrip).append(gray);
+    const ink = sv('image', box); ink.setAttribute('href', base + `ink${r}.png`); wrap(gInk).append(ink);
+  });
+
+  const txt = (g, x0, y0, t, cls = '', anchor = 'start') => { const e = sv('text', { x: x0, y: y0, class: cls, 'text-anchor': anchor }); e.textContent = t; g.append(e); return e; };
+  for (let r = 0; r < 4; r++) [-1, 0, 1].forEach(v => txt(gLab, pad.l - 6, yr(r, v) + 4, (v > 0 ? '+' : '') + v, '', 'end'));
+  txt(gLab, 4, pad.t + 11, 'mV');
+  for (let t = 0; t <= T; t++) txt(gLab, x(t), H - 7, t + (t === T ? ' s' : ''), '', 'middle');
   const segs = [];
   ROWS.forEach((names, r) => names.forEach((n, c) => {
     const L = cur.leads[n]; const t0 = r === 3 ? 0 : c * 2.5;
-    txt(x(t0) + 4, yr(r, MV) + 13, r === 3 ? 'II (rhythm, 10 s)' : n, 'lead-lab');
-    if (!L) { txt(x(t0) + 4, yr(r, 0), 'not recovered', 'rm'); return; }
-    txt(x(t0) + 4, yr(r, MV) + 25, `error ${fmt(L.rmse)} mV`, 'rm');
-    if (r < 3 && c > 0) svg.append(sv('line', { x1: x(t0), x2: x(t0), y1: yr(r, .35), y2: yr(r, -.35), stroke: '#1d2330', 'stroke-width': 1.2 }));
+    txt(gLab, x(t0) + 4, yr(r, MV) + 13, r === 3 ? 'II (rhythm, 10 s)' : n, 'lead-lab');
+    if (!L) { txt(gLab, x(t0) + 4, yr(r, 0), 'not recovered', 'rm'); return; }
+    txt(gLab, x(t0) + 4, yr(r, MV) + 25, `error ${fmt(L.rmse)} mV`, 'rm');
+    if (r < 3 && c > 0) gLab.append(sv('line', { x1: x(t0), x2: x(t0), y1: yr(r, .35), y2: yr(r, -.35), stroke: '#1d2330', 'stroke-width': 1.2 }));
     segs.push({ L, r, t0, n: r === 3 ? 'II (rhythm)' : n });
   }));
-  const path = (arr, r, t0) => arr.map((v, i) => (i ? 'L' : 'M') + x(t0 + i / fs).toFixed(1) + ' ' + yr(r, Math.max(-MV, Math.min(MV, v))).toFixed(1)).join('');
-  segs.forEach(({ L, r, t0 }, k) => {
-    const layers = showTrue ? [['true', 'var(--blue)'], ['pred', 'var(--red)']] : [['pred', 'var(--red)']];
-    layers.forEach(([key, c], j) => {
-      const p = sv('path', { d: path(L[key], r, t0), class: 'series', stroke: c, opacity: key === 'true' ? .85 : 1 }); svg.append(p);
-      if (animate) { const len = p.getTotalLength(); p.style.strokeDasharray = len; p.style.strokeDashoffset = len; p.getBoundingClientRect(); p.style.transition = `stroke-dashoffset 1.1s ease ${(r * .35 + (r < 3 ? t0 / 2.5 * .12 : 0) + j * .15).toFixed(2)}s`; p.style.strokeDashoffset = 0; }
-    });
+  const path = (arr, r, t0) => { let d = '', pen = false; arr.forEach((v, i) => { if (v == null) { pen = false; return; } d += (pen ? 'L' : 'M') + x(t0 + i / fs).toFixed(1) + ' ' + yr(r, Math.max(-MV, Math.min(MV, v))).toFixed(1); pen = true; }); return d; };
+  segs.forEach(({ L, r, t0 }) => {
+    gBlue.append(sv('path', { d: path(L.true, r, t0), class: 'series', stroke: 'var(--blue)', opacity: .85 }));
+    gRed.append(sv('path', { d: path(L.pred, r, t0), class: 'series', stroke: 'var(--red)' }));
   });
+
   // hover: crosshair + values for the lead under the pointer
   const hl = sv('line', { class: 'hover-line', opacity: 0 }); svg.append(hl);
   const dots = ['var(--blue)', 'var(--red)'].map(c => { const d = sv('circle', { r: 4, fill: c, stroke: '#fff', 'stroke-width': 2, opacity: 0 }); svg.append(d); return d; });
-  const hit = sv('rect', { x: pad.l, y: pad.t, width: W - pad.l - pad.r, height: H - pad.t - pad.b, fill: 'transparent' }); svg.append(hit);
+  const hit = sv('rect', { class: 'hit', x: pad.l, y: pad.t, width: plotW, height: H - pad.t - pad.b, fill: 'transparent' }); svg.append(hit);
   const tip = $('#tip');
   const hide = () => { tip.style.opacity = 0; hl.setAttribute('opacity', 0); dots.forEach(d => d.setAttribute('opacity', 0)); };
   const move = ev => {
     const R = svg.getBoundingClientRect(), p = ev.touches ? ev.touches[0] : ev;
     const px = (p.clientX - R.left) * W / R.width, py = (p.clientY - R.top) * H / R.height;
     const r = Math.max(0, Math.min(3, Math.floor((py - pad.t) / rowH)));
-    const t = (px - pad.l) / (W - pad.l - pad.r) * T;
+    const t = (px - pad.l) / plotW * T;
     const sg = segs.find(s => s.r === r && t >= s.t0 && t < s.t0 + (r === 3 ? 10 : 2.5));
     if (!sg) return hide();
     const i = Math.max(0, Math.min(sg.L.pred.length - 1, Math.round((t - sg.t0) * fs)));
-    const X = x(sg.t0 + i / fs);
+    const X = x(sg.t0 + i / fs), showTrue = $('#showTrue').checked;
     hl.setAttribute('x1', X); hl.setAttribute('x2', X); hl.setAttribute('y1', yr(r, MV)); hl.setAttribute('y2', yr(r, -MV)); hl.setAttribute('opacity', 1);
     const vt = sg.L.true[i], vp = sg.L.pred[i];
     [[dots[0], showTrue ? vt : null], [dots[1], vp]].forEach(([d, v]) => { if (v == null) return d.setAttribute('opacity', 0); d.setAttribute('cx', X); d.setAttribute('cy', yr(r, Math.max(-MV, Math.min(MV, v)))); d.setAttribute('opacity', 1); });
     tip.innerHTML = `<b>${sg.n}</b> · ${fmt(sg.t0 + i / fs)} s<br><i style="background:var(--red)"></i>recovered ${vp != null ? fmt(vp) : '–'} mV` + (showTrue ? `<br><i style="background:var(--blue)"></i>original ${vt != null ? fmt(vt) : '–'} mV` : '');
-    const sr = $('#stage').getBoundingClientRect(), sx = R.width / W, sy = R.height / H;
-    tip.style.left = Math.min(R.left - sr.left + X * sx + 12, sr.width - 180) + 'px';
-    tip.style.top = Math.max(4, R.top - sr.top + yr(r, MV) * sy - 4) + 'px'; tip.style.opacity = 1;
+    const sr = $('#stage').getBoundingClientRect(), sxx = R.width / W, syy = R.height / H;
+    tip.style.left = Math.min(R.left - sr.left + X * sxx + 12, sr.width - 180) + 'px';
+    tip.style.top = Math.max(4, R.top - sr.top + yr(r, MV) * syy - 4) + 'px'; tip.style.opacity = 1;
   };
   hit.addEventListener('mousemove', move); hit.addEventListener('touchmove', move, { passive: true }); hit.addEventListener('mouseleave', hide);
 }
-window.addEventListener('resize', () => { if (step === 5) draw12(false); });
+
+// keep the whole demo (title to play button) inside one screen
+function fitDemo() {
+  const st = $('#stage'), sec = $('#demo');
+  st.style.width = '';
+  const other = sec.getBoundingClientRect().height - st.getBoundingClientRect().height;
+  const maxW = (window.innerHeight - other - 6) * 22 / 17;
+  if (maxW > 320) st.style.width = Math.min(st.parentElement.clientWidth, maxW) + 'px';
+}
+window.addEventListener('resize', () => {
+  fitDemo();
+  if (step >= 4) { chartFor = null; chartMode(step === 4 ? 'ink' : 'signal', -1); if (step === 4) $('#ecg12').querySelectorAll('.g-ink image').forEach((im, k) => { im.classList.add('on'); $('#ecg12').querySelectorAll('.g-strip image')[k].classList.add('dim'); }); }
+});
 
 
 /* ---------- results ---------- */
@@ -718,7 +762,6 @@ function unet(svgId, { res = false, cbam = false, inCh = 1 }) {
 unet('#unet1Svg', { inCh: 1 });
 unet('#unet2Svg', { res: true, cbam: true, inCh: 2 });
 
-$('#orbN').textContent = G.orb_matches;
 (function stage2and3() {
   const s = D.samples.find(x => x.flipped) || D.samples[0];
   const m = D.samples[0];
@@ -731,7 +774,6 @@ $('#orbN').textContent = G.orb_matches;
     p.append(sv('polygon', { points: s.corners.map(c => c.join(',')).join(' '), fill: 'rgba(224,49,75,.08)', stroke: '#e0314b', 'stroke-width': .012, 'vector-effect': 'non-scaling-stroke', style: 'stroke-width:3px' }));
   }
   const O = G.orientation;
-  $('#flipScore').textContent = `${O.score_before}/4 → ${O.score_after}/4`;
   const grid = $('#histGrid');
   [['before', 'Read as received (upside down)'], ['after', 'After 180°']].forEach(([k, title]) => {
     const col = el('div'); col.append(el('h4', {}, `${title} · ${k === 'before' ? O.score_before : O.score_after}/4 strips real`));
@@ -792,6 +834,7 @@ $('#orbN').textContent = G.orb_matches;
 // deep links: ?s=<sample index>&step=<0-5>
 const q = new URLSearchParams(location.search);
 if (q.has('static')) document.body.classList.add('static');   // screenshots / no motion
+fitDemo();
 load(Math.min(+(q.get('s') || 0), D.samples.length - 1), false);
 if (q.has('step')) { const k = +q.get('step'); setTimeout(() => go(k), 50); }
 })();

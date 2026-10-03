@@ -19,8 +19,8 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from p2p import Pipeline                                   # noqa: E402
-from p2p.config import CANVAS_H, CANVAS_W, DEGRADATIONS, STRIP_LEADS, STRIP_ROWS   # noqa: E402
-from p2p.digitise import clean_mask, strip_to_leads        # noqa: E402
+from p2p.config import CANVAS_H, CANVAS_W, DEGRADATIONS, MV_PER_PX, STRIP_LEADS, STRIP_ROWS   # noqa: E402
+from p2p.digitise import clean_mask, extract_ecg_trace, strip_to_leads        # noqa: E402
 from p2p.metrics import aligned_scores                     # noqa: E402
 
 INK = (75, 49, 224)          # BGR of #e0314b, the page accent
@@ -55,12 +55,29 @@ def png(path, img, width):
     cv2.imwrite(str(path), img, [cv2.IMWRITE_PNG_COMPRESSION, 9])
 
 
-def aligned_pair(pred, gt, fs):
-    """The prediction exactly as the metric scored it (shifted + offset), for an honest overlay."""
+def pair_in_ink_frame(pred, gt, fs):
+    """Recovered trace exactly where it was read off the page, with the original
+    recording shifted onto it by the metric's own lag and offset.
+
+    Drawing it this way round keeps the red line on top of the ink it came
+    from, so the page can morph from ink to signal; the error is unchanged.
+    """
     gt = np.asarray(gt, float)
-    s = aligned_scores(pred, gt[~np.isnan(gt)], fs, return_aligned=True)
+    gt = gt[~np.isnan(gt)]
+    s = aligned_scores(pred, gt, fs)
+    lag = int(round(s["lag_s"] * fs))
+    L = min(len(pred), len(gt))
+    i = np.arange(len(pred))
+    k = i + lag
+    ok = (i < L) & (k >= 0) & (k < L)
+    true_disp = np.full(len(pred), np.nan)
+    true_disp[ok] = gt[k[ok]] - s["offset_mv"]
     step = max(1, int(round(fs / PLOT_HZ)))
-    return s.pop("pred_aligned")[::step], s.pop("true_aligned")[::step], s
+    return np.asarray(pred)[::step], true_disp[::step], s
+
+
+def rounded(a):
+    return [None if np.isnan(v) else round(float(v), 3) for v in a]
 
 
 def export_sample(pipe, data, rid, suffix, meta, out_dir):
@@ -109,16 +126,26 @@ def export_sample(pipe, data, rid, suffix, meta, out_dir):
             if name == "II" and i != 3:
                 continue
             gt = truth[name].values if i == 3 else truth[name].values[j * q:(j + 1) * q]
-            p, t, s = aligned_pair(v, gt, fs)
-            leads[name] = {"strip": i, "col": j, "pred": np.round(p, 3).tolist(), "true": np.round(t, 3).tolist(),
+            p, t, s = pair_in_ink_frame(v, gt, fs)
+            leads[name] = {"strip": i, "col": j, "pred": rounded(p), "true": rounded(t),
                            "rmse": round(s["rmse"], 4), "corr": round(s["corr"], 3)}
     rmses = [v["rmse"] for v in leads.values()]
+
+    # where each strip's ink sits, so the page can place it on the signal axes
+    strip_geom = []
+    for sm in res.strip_masks:
+        cm = clean_mask(sm)
+        _, _, base = extract_ecg_trace(cm)
+        cols = np.where(cm.any(axis=0))[0]
+        strip_geom.append({"w": int(cm.shape[1]), "h": int(cm.shape[0]), "baseline": int(base),
+                           "first": int(cols[0]) if len(cols) else 0, "last": int(cols[-1]) if len(cols) else int(cm.shape[1] - 1)})
 
     info = {
         "id": f"{rid}-{suffix}", "record": rid, "suffix": suffix, "degradation": DEGRADATIONS[suffix],
         "flipped": bool(res.flipped), "aspect": round(nw / nh, 4), "corners": corners,
         "strip_rows": [[a / CANVAS_H, b / CANVAS_H] for a, b in STRIP_ROWS],
-        "fs_plot": PLOT_HZ, "leads": leads,
+        "strip_geom": strip_geom, "mv_per_px": MV_PER_PX,
+        "fs_plot": fs / max(1, int(round(fs / PLOT_HZ))), "leads": leads,
         "mean_rmse": round(float(np.mean(rmses)), 4) if rmses else None,
         "n_leads": len(leads),
         "runtime_s": round(runtime, 2),
@@ -179,9 +206,10 @@ def gif_frames(info, res, raw, width=900):
     fig, ax = plt.subplots(figsize=(width / 100, (H - 60) / 100), dpi=100)
     lead = info["leads"].get("II")
     if lead:
-        t = np.arange(len(lead["true"])) / info["fs_plot"]
-        ax.plot(t, lead["true"], color="#2e6fb5", lw=1.4, label="Original recording")
-        ax.plot(t[:len(lead["pred"])], lead["pred"], color="#e0314b", lw=1.2, label="Recovered from the photo")
+        tv = np.array(lead["true"], dtype=float)
+        t = np.arange(len(tv)) / info["fs_plot"]
+        ax.plot(t, tv, color="#2e6fb5", lw=1.4, label="Original recording")
+        ax.plot(t, np.array(lead["pred"], dtype=float), color="#e0314b", lw=1.2, label="Recovered from the photo")
         ax.set_title(f"Lead II, error {lead['rmse']:.2f} mV", fontsize=14)
     ax.set_xlabel("seconds"); ax.set_ylabel("mV"); ax.legend(loc="upper right", frameon=False)
     for s in ("top", "right"):
