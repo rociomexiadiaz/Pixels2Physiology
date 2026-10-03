@@ -155,6 +155,9 @@ section{padding:72px 0;border-top:1px solid var(--line)}
 .bar-row .v{font-variant-numeric:tabular-nums;color:var(--ink-2);text-align:right}
 .ref-line{position:absolute;top:-4px;bottom:-4px;width:0;border-left:1px solid var(--ink-3)}
 .ref-lab{font-size:12px;color:var(--ink-3);margin-top:8px}
+.limitation{margin-top:14px;border-left:4px solid var(--red)}
+.limitation h3{margin-bottom:6px}
+.limitation p{margin:0;color:var(--ink-2)}
 
 /* ---------- automation ---------- */
 .auto{display:grid;grid-template-columns:.8fr 1.2fr;gap:28px;align-items:center}
@@ -227,6 +230,7 @@ body.static .hero-ecg path{stroke-dashoffset:0}
       <ul class="bullets">
         <li>Paper ECGs are readable by human doctors</li>
         <li>Not readable (or very expensive) by AI</li>
+        <li>AI models work best on time-series data</li>
       </ul>
     </div>
     <div class="paper-stack" id="paperStack" aria-hidden="true"></div>
@@ -235,8 +239,12 @@ body.static .hero-ecg path{stroke-dashoffset:0}
 
 <section id="pipeline">
   <div class="wrap">
-    <div class="kicker">The pipeline</div>
-    <div class="flow" id="flow"></div>
+    <div class="kicker">The solution</div>
+    <ul class="bullets">
+      <li>Reproducible</li>
+      <li>Interpretable</li>
+      <li>Lightweight</li>
+    </ul>
   </div>
 </section>
 
@@ -258,7 +266,7 @@ body.static .hero-ecg path{stroke-dashoffset:0}
             <img id="maskImg" alt="">
           </div>
         </div>
-        <div class="layer hidden" id="pageLayer"><img id="pageImg" alt="Flattened ECG page"><div id="boxes"></div></div>
+        <div class="layer hidden" id="pageLayer"><img id="pageImg" alt="Cropped ECG page"><div id="boxes"></div></div>
         <svg id="overlay" viewBox="0 0 2200 1700" preserveAspectRatio="none" aria-hidden="true"><polygon id="poly" points=""/><g id="dots"></g></svg>
         <div class="layer hidden" id="signalLayer">
           <div class="sig-head">
@@ -293,6 +301,7 @@ body.static .hero-ecg path{stroke-dashoffset:0}
         <div class="ref-lab">mV · line = average</div>
       </div>
     </div>
+    <div class="panel limitation"><h3>Limitation</h3><p>The pipeline requires this fixed ECG layout.</p></div>
   </div>
 </section>
 
@@ -438,16 +447,15 @@ const M = D.metrics;
 /* ---------- problem collage ---------- */
 D.samples.slice(0, 3).forEach(s => $('#paperStack').append(el('img', { src: `assets/samples/${s.id}/input.jpg`, alt: '' })));
 
-/* ---------- pipeline cards ---------- */
+/* ---------- pipeline steps ---------- */
 const STEPS = [
   { t: 'Photo in', k: 'rule' },
   { t: 'Find the paper', k: 'ai' },
-  { t: 'Flatten & rotate', k: 'rule' },
+  { t: 'Crop & rotate', k: 'rule' },
   { t: 'Cut the strips', k: 'rule' },
   { t: 'Lift the ink', k: 'ai' },
   { t: 'Measure', k: 'rule' },
 ];
-STEPS.forEach((s, i) => $('#flow').append(el('div', { class: 'flow-card' + (s.k === 'ai' ? ' ai' : '') }, `<div class="n">${i + 1}</div>${s.k === 'ai' ? '<span class="tag ai">AI model</span>' : ''}<h3>${s.t}</h3>`)));
 
 /* ---------- demo player ---------- */
 const stepsEl = $('#steps');
