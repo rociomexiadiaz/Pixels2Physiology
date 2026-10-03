@@ -6,7 +6,7 @@
   "flipped": false,
   "mean_rmse": 0.1192,
   "n_leads": 12,
-  "runtime_s": 12.5
+  "runtime_s": 12.94
  },
  {
   "id": "1962423499-10",
@@ -15,7 +15,7 @@
   "flipped": true,
   "mean_rmse": 0.2538,
   "n_leads": 12,
-  "runtime_s": 12.08
+  "runtime_s": 12.32
  },
  {
   "id": "3201760749-10",
@@ -33,7 +33,7 @@
   "flipped": false,
   "mean_rmse": 0.1053,
   "n_leads": 12,
-  "runtime_s": 11.97
+  "runtime_s": 11.99
  },
  {
   "id": "3563585176-9",
@@ -42,7 +42,7 @@
   "flipped": false,
   "mean_rmse": 0.1034,
   "n_leads": 12,
-  "runtime_s": 12.04
+  "runtime_s": 12.01
  },
  {
   "id": "1632590593-12",
@@ -51,6 +51,6 @@
   "flipped": false,
   "mean_rmse": 0.1076,
   "n_leads": 12,
-  "runtime_s": 12.14
+  "runtime_s": 12.04
  }
 ]

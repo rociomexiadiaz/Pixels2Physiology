@@ -123,13 +123,13 @@ def export_sample(pipe, data, rid, suffix, meta, out_dir):
     leads = {}
     for i, sm in enumerate(res.strip_masks):
         for j, (name, v) in enumerate(strip_to_leads(clean_mask(sm), i, n).items()):
-            if name == "II" and i != 3:
-                continue
             gt = truth[name].values if i == 3 else truth[name].values[j * q:(j + 1) * q]
             p, t, s = pair_in_ink_frame(v, gt, fs)
-            leads[name] = {"strip": i, "col": j, "pred": rounded(p), "true": rounded(t),
+            # row 2 starts with a 2.5 s copy of lead II; row 4 is the 10 s rhythm strip
+            key = "II_short" if (name == "II" and i != 3) else name
+            leads[key] = {"strip": i, "col": j, "pred": rounded(p), "true": rounded(t),
                            "rmse": round(s["rmse"], 4), "corr": round(s["corr"], 3)}
-    rmses = [v["rmse"] for v in leads.values()]
+    rmses = [v["rmse"] for k, v in leads.items() if k != "II_short"]   # the standard 12 leads
 
     # where each strip's ink sits, so the page can place it on the signal axes
     strip_geom = []
@@ -147,7 +147,7 @@ def export_sample(pipe, data, rid, suffix, meta, out_dir):
         "strip_geom": strip_geom, "mv_per_px": MV_PER_PX,
         "fs_plot": fs / max(1, int(round(fs / PLOT_HZ))), "leads": leads,
         "mean_rmse": round(float(np.mean(rmses)), 4) if rmses else None,
-        "n_leads": len(leads),
+        "n_leads": len(rmses),
         "runtime_s": round(runtime, 2),
     }
     (d / "result.json").write_text(json.dumps(info, separators=(",", ":")))

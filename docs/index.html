@@ -572,7 +572,7 @@ $('#prevBtn').onclick = () => { stop(); cur && go(Math.max(0, step - 1)); };
 
 /* ---------- 12-lead chart, laid out like the printout ---------- */
 const ORDER = ['I', 'II', 'III', 'aVR', 'aVL', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6'];
-const ROWS = [['I', 'aVR', 'V1', 'V4'], ['II', 'aVL', 'V2', 'V5'], ['III', 'aVF', 'V3', 'V6'], ['II']];
+const ROWS = [['I', 'aVR', 'V1', 'V4'], ['II_short', 'aVL', 'V2', 'V5'], ['III', 'aVF', 'V3', 'V6'], ['II']];
 let chartFor = null;
 $('#showTrue').onchange = () => { $('#ecg12 .g-blue') && ($('#ecg12 .g-blue').style.display = $('#showTrue').checked ? '' : 'none'); };
 
@@ -640,11 +640,11 @@ function buildChart() {
   const segs = [];
   ROWS.forEach((names, r) => names.forEach((n, c) => {
     const L = cur.leads[n]; const t0 = r === 3 ? 0 : c * 2.5;
-    txt(gLab, x(t0) + 4, yr(r, MV) + 13, r === 3 ? 'II (rhythm, 10 s)' : n, 'lead-lab');
+    txt(gLab, x(t0) + 4, yr(r, MV) + 13, r === 3 ? 'II (rhythm, 10 s)' : n.replace('_short', ''), 'lead-lab');
     if (!L) { txt(gLab, x(t0) + 4, yr(r, 0), 'not recovered', 'rm'); return; }
     txt(gLab, x(t0) + 4, yr(r, MV) + 25, `error ${fmt(L.rmse)} mV`, 'rm');
     if (r < 3 && c > 0) gLab.append(sv('line', { x1: x(t0), x2: x(t0), y1: yr(r, .35), y2: yr(r, -.35), stroke: '#1d2330', 'stroke-width': 1.2 }));
-    segs.push({ L, r, t0, n: r === 3 ? 'II (rhythm)' : n });
+    segs.push({ L, r, t0, n: r === 3 ? 'II (rhythm)' : n.replace('_short', '') });
   }));
   const path = (arr, r, t0) => { let d = '', pen = false; arr.forEach((v, i) => { if (v == null) { pen = false; return; } d += (pen ? 'L' : 'M') + x(t0 + i / fs).toFixed(1) + ' ' + yr(r, Math.max(-MV, Math.min(MV, v))).toFixed(1); pen = true; }); return d; };
   segs.forEach(({ L, r, t0 }) => {
