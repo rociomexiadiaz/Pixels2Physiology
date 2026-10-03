@@ -2,7 +2,8 @@
 
 **Turn a photo or scan of a paper ECG back into the digital heart signal, automatically.**
 
-▶ **[Interactive walkthrough](https://rociomexiadiaz.github.io/Pixels2Physiology/)**: pick a damaged ECG and watch every step run.
+### ▶ [Open the interactive demo: Automatic ECG Digitalisation](https://rociomexiadiaz.github.io/Pixels2Physiology/)
+Pick a damaged ECG and step through every stage, from photo to 12-lead signal.
 
 ![The pipeline, step by step](docs/assets/pipeline.gif)
 
@@ -121,6 +122,7 @@ scripts/
   train_unet1.py       train the paper finder
   train_unet2.py       train the ink finder
   make_demo_assets.py  run real records and export every step for docs/
+  make_diagram_assets.py  real outputs for the 'under the hood' diagram
   build_site_data.py   bundle samples + metrics for the web page
 docs/                  the interactive walkthrough (GitHub Pages)
 pixels2physiology.ipynb  the original Kaggle notebook
