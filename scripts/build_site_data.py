@@ -35,5 +35,16 @@ metrics = {
 }
 out = ROOT / "docs/assets/data.js"
 out.write_text("window.P2P = " + json.dumps({"metrics": metrics, "samples": samples}, separators=(",", ":")) + ";\n")
+
+# version-stamp the data scripts in the page so browsers never pair a new page with cached old data
+import hashlib, re
+page = ROOT / "docs/index.html"
+html = page.read_text()
+for name in ("data.js", "diagram.js"):
+    f = ROOT / "docs/assets" / name
+    if f.exists():
+        v = hashlib.sha1(f.read_bytes()).hexdigest()[:8]
+        html = re.sub(rf'assets/{re.escape(name)}(\?v=[0-9a-f]+)?"', f'assets/{name}?v={v}"', html)
+page.write_text(html)
 print(json.dumps({k: v for k, v in metrics.items() if k != "per_lead"}, indent=1))
 print(f"wrote {out} ({out.stat().st_size / 1e6:.2f} MB)")
