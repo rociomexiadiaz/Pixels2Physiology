@@ -56,6 +56,11 @@ section{padding:72px 0;border-top:1px solid var(--line)}
 .paper-stack img:nth-child(2){left:12%;top:0;transform:rotate(3deg)}
 .paper-stack img:nth-child(3){left:22%;top:16%;transform:rotate(-1deg)}
 
+/* ---------- solution ---------- */
+.versus{display:grid;grid-template-columns:1fr auto 1fr;gap:48px;align-items:center}
+.vs{font:600 15px/1 Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--red)}
+.bullets.ours li::before{background:var(--red)}
+
 /* ---------- pipeline overview ---------- */
 .flow{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
 .flow-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 14px 18px;position:relative;min-height:128px;display:flex;flex-direction:column}
@@ -201,7 +206,8 @@ footer{padding:40px 0 60px;color:var(--ink-3);font-size:14px;border-top:1px soli
 
 @media (max-width:900px){
   .stage-card.wide .info,.stage-card.wide .spec{grid-template-columns:1fr}
-  .two,.res-grid,.auto,.stage-card{grid-template-columns:1fr}
+  .two,.res-grid,.auto,.stage-card,.versus{grid-template-columns:1fr}
+  .versus{gap:18px}
   .flow{grid-template-columns:repeat(3,1fr)} .flow-card::after{display:none}
 }
 @media (max-width:600px){
@@ -240,11 +246,17 @@ body.static .hero-ecg path{stroke-dashoffset:0}
 <section id="pipeline">
   <div class="wrap">
     <div class="kicker">The solution</div>
-    <ul class="bullets">
-      <li>Reproducible</li>
-      <li>Interpretable</li>
-      <li>Lightweight</li>
-    </ul>
+    <div class="versus">
+      <ul class="bullets">
+        <li>One big model?</li>
+      </ul>
+      <div class="vs">vs</div>
+      <ul class="bullets ours">
+        <li>Reproducible</li>
+        <li>Interpretable</li>
+        <li>Lightweight</li>
+      </ul>
+    </div>
   </div>
 </section>
 
