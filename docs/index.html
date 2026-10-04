@@ -797,22 +797,27 @@ unet('#unet2Svg', { res: true, cbam: true, inCh: 2 });
   const grid = $('#histGrid');
   [['before', 'Read as received (upside down)'], ['after', 'After 180°']].forEach(([k, title]) => {
     const col = el('div'); col.append(el('h4', {}, `${title} · ${k === 'before' ? O.score_before : O.score_after}/4 strips real`));
+    // each strip's ink profile stands upright: pixel row runs top→bottom as on the paper, bar length = ink in that row
+    const n = O[k][0].hist.length, PW = 96, gap = 14, top = 22, PH = 200, left = 44;
+    const W = left + 4 * PW + 3 * gap, H = top + PH + 34;
+    const svg = sv('svg', { viewBox: `0 0 ${W} ${H}`, class: 'hist-svg' });
+    const y = r => top + r / n * PH;
+    const lab = (x, yy, s, a = 'start', st = '') => { const t = sv('text', { x, y: yy, 'text-anchor': a, style: st }); t.textContent = s; svg.append(t); };
+    lab(left - 6, top + 4, 'top', 'end'); lab(left - 6, top + PH, 'bottom', 'end');
     O[k].forEach((h, i) => {
-      const W = 240, Hh = 46, n = h.hist.length, mx = Math.max(...h.hist, 1);
-      const svg = sv('svg', { viewBox: `0 0 ${W} ${Hh}`, class: 'hist-svg' });
-      // rows run left→right (top of strip → bottom), bar height = ink in that row
-      const x = r => 30 + r / n * (W - 70);
-      const b0 = x(Math.max(0, h.baseline - O.margin)), b1 = x(Math.min(n, h.baseline + O.margin));
-      svg.append(sv('rect', { x: b0, y: 2, width: b1 - b0, height: Hh - 14, fill: '#f3eee5' }));
+      const x0 = left + i * (PW + gap), mx = Math.max(...h.hist, 1);
+      const b0 = y(Math.max(0, h.baseline - O.margin)), b1 = y(Math.min(n, h.baseline + O.margin));
+      svg.append(sv('rect', { x: x0, y: top, width: PW, height: PH, fill: 'none', stroke: '#e8e2d8' }));
+      svg.append(sv('rect', { x: x0, y: b0, width: PW, height: b1 - b0, fill: '#f3eee5' }));
       let d = '';
-      h.hist.forEach((v, r) => { if (v) d += `M${x(r).toFixed(1)} ${Hh - 12}V${(Hh - 12 - Math.sqrt(v / mx) * (Hh - 16)).toFixed(1)}`; });
-      svg.append(sv('path', { d, stroke: '#e0314b', 'stroke-width': .9 }));
-      svg.append(sv('line', { x1: x(h.baseline), x2: x(h.baseline), y1: 2, y2: Hh - 12, stroke: '#1d2330', 'stroke-width': 1 }));
-      const t = sv('text', { x: 0, y: 20 }); t.textContent = `row ${i + 1}`; svg.append(t);
-      const ok = sv('text', { x: W - 4, y: 20, 'text-anchor': 'end', style: `font:600 11px Inter;fill:${h.upright ? '#2f7d2f' : '#e0314b'}` }); ok.textContent = h.upright ? '✓ trace' : '✗ flat'; svg.append(ok);
-      if (i === 3) { const lt = sv('text', { x: 30, y: Hh - 1 }); lt.textContent = 'row of strip → (shaded = baseline ± 50 px)'; svg.append(lt); }
-      col.append(svg);
+      h.hist.forEach((v, r) => { if (v) d += `M${x0} ${y(r).toFixed(1)}H${(x0 + Math.sqrt(v / mx) * (PW - 6)).toFixed(1)}`; });
+      svg.append(sv('path', { d, stroke: '#e0314b', 'stroke-width': .7, fill: 'none' }));
+      svg.append(sv('line', { x1: x0, x2: x0 + PW, y1: y(h.baseline), y2: y(h.baseline), stroke: '#1d2330', 'stroke-width': 1 }));
+      lab(x0 + PW / 2, top - 8, `row ${i + 1}`, 'middle', 'font-size:10.5px');
+      lab(x0 + PW / 2, top + PH + 18, h.upright ? '✓ trace' : '✗ flat', 'middle', `font:600 11px Inter;fill:${h.upright ? '#2f7d2f' : '#e0314b'}`);
     });
+    lab(left, H - 2, 'ink per row → (shaded = baseline ± 50 px)');
+    col.append(svg);
     grid.append(col);
   });
 })();
